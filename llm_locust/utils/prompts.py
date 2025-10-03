@@ -39,12 +39,13 @@ def load_databricks_dolly(
         tokenizer: Tokenizer for counting input tokens
         min_input_length: Minimum prompt length in tokens
         max_input_length: Maximum prompt length in tokens
-        cache_dir: Directory to cache dataset (default: current directory)
+        cache_dir: Directory to cache dataset (default: datasets/)
 
     Returns:
         List of prompt dictionaries with 'prompt' and 'num_input_tokens' keys
     """
-    cache_file = (cache_dir or Path.cwd()) / "databricks-dolly-15k.jsonl"
+    default_cache_dir = Path.cwd() / "datasets"
+    cache_file = (cache_dir or default_cache_dir) / "databricks-dolly-15k.jsonl"
 
     # Load from cache if available
     if cache_file.exists():
@@ -63,7 +64,7 @@ def load_databricks_dolly(
             # Cache the dataset
             cache_file.parent.mkdir(parents=True, exist_ok=True)
             with open(cache_file, "wb") as f:
-                f.write(content)
+            f.write(content)
 
             dataset = [json.loads(line) for line in content.decode().split("\n") if line.strip()]
             logger.info(f"Dataset downloaded and cached to {cache_file}")
@@ -137,7 +138,8 @@ def load_sharegpt(
     Returns:
         List of prompt dictionaries with 'prompt' and 'num_input_tokens' keys
     """
-    cache_file = (cache_dir or Path.cwd()) / "sharegpt.jsonl"
+    default_cache_dir = Path.cwd() / "datasets"
+    cache_file = (cache_dir or default_cache_dir) / "sharegpt.jsonl"
 
     # Load from cache if available
     if cache_file.exists():
@@ -347,7 +349,8 @@ def load_cnn_dailymail(
     Returns:
         List of summarization prompt dictionaries
     """
-    cache_file = (cache_dir or Path.cwd()) / f"cnn_dailymail_{split}.jsonl"
+    default_cache_dir = Path.cwd() / "datasets"
+    cache_file = (cache_dir or default_cache_dir) / f"cnn_dailymail_{split}.jsonl"
 
     if cache_file.exists():
         logger.info(f"Loading cached CNN/DailyMail dataset from {cache_file}")
@@ -394,7 +397,7 @@ def load_cnn_dailymail(
 
         try:
             num_tokens = len(
-                tokenizer.apply_chat_template(
+            tokenizer.apply_chat_template(
                     chat,
                     tokenize=True,
                     add_generation_prompt=True,
@@ -448,7 +451,8 @@ def load_billsum(
     Returns:
         List of long-context prompt dictionaries
     """
-    cache_file = (cache_dir or Path.cwd()) / "billsum.jsonl"
+    default_cache_dir = Path.cwd() / "datasets"
+    cache_file = (cache_dir or default_cache_dir) / "billsum.jsonl"
 
     if cache_file.exists():
         logger.info(f"Loading cached BillSum dataset from {cache_file}")
@@ -494,7 +498,7 @@ def load_billsum(
 
         try:
             num_tokens = len(
-                tokenizer.apply_chat_template(
+            tokenizer.apply_chat_template(
                     chat,
                     tokenize=True,
                     add_generation_prompt=True,
@@ -547,7 +551,8 @@ def load_infinity_instruct(
     Returns:
         List of long-decode prompt dictionaries
     """
-    cache_file = (cache_dir or Path.cwd()) / "infinity_instruct.jsonl"
+    default_cache_dir = Path.cwd() / "datasets"
+    cache_file = (cache_dir or default_cache_dir) / "infinity_instruct.jsonl"
 
     if cache_file.exists():
         logger.info(f"Loading cached Infinity Instruct dataset from {cache_file}")
@@ -673,7 +678,7 @@ def create_shared_prefix_dataset(
 
         try:
             num_tokens = len(
-                tokenizer.apply_chat_template(
+            tokenizer.apply_chat_template(
                     chat,
                     tokenize=True,
                     add_generation_prompt=True,
