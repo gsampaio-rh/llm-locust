@@ -47,10 +47,10 @@ python examples/benchmark_chat_simulation.py \
 
 **Available Benchmarks:**
 - ✅ **Test 1a: Chat Simulation** - Conversational AI workload (256/128 tokens)
-- 🚧 Test 1b: RAG Simulation - Large context processing (4096/512 tokens)
-- 🚧 Test 1c: Code Generation - Balanced workload (512/512 tokens)
-- 🚧 Test 2a: Constant Rate - Sustained load testing
-- 🚧 Test 2b: Poisson Rate - Bursty traffic patterns
+- ✅ **Test 1b: RAG Simulation** - Large context processing (4096/512 tokens)
+- ✅ **Test 1c: Code Generation** - Balanced workload (512/512 tokens)
+- ✅ **Test 2a: Constant Rate** - Sustained load testing (512/256 tokens)
+- ✅ **Test 2b: Poisson Rate** - Bursty traffic patterns (512/256 tokens)
 
 See [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) for detailed benchmark documentation.
 

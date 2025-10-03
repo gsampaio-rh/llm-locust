@@ -39,17 +39,213 @@ python examples/benchmark_chat_simulation.py \
 
 ---
 
-### 🚧 Test 1b: RAG Simulation (Coming Soon)
-Large input contexts (4096 tokens) with detailed responses (512 tokens).
+### ✅ Test 1b: RAG Simulation
+**File:** `examples/benchmark_rag_simulation.py`
 
-### 🚧 Test 1c: Code Generation (Coming Soon)
-Balanced input-output (512/512 tokens) for development assistance.
+**Objective:** Assess performance when handling large input contexts and longer responses typical of retrieval-augmented generation (RAG) systems.
 
-### 🚧 Test 2a: Constant Rate (Coming Soon)
-Sustained load testing with predictable traffic patterns.
+**Workload Profile:**
+- **Input tokens:** ~4096 per request
+- **Output tokens:** ~512 per request
+- **Interaction type:** Long-form context ingestion with detailed answers
+- **Duration:** 15 minutes (default)
+- **Concurrency:** 20 parallel sessions (default)
+- **Rate:** Moderate pace representing document querying workloads
 
-### 🚧 Test 2b: Poisson Rate (Coming Soon)
-Bursty traffic patterns with irregular spikes.
+**Success Criteria:**
+- TTFT median < 3 seconds (higher due to long context)
+- Throughput stability (no significant degradation)
+- No OOM errors or memory-related failures
+- Consistent tokens/second efficiency
+
+**Use Cases:**
+Knowledge-base assistants, research copilots, enterprise search systems requiring context-heavy queries.
+
+**Dataset:** BillSum (long legislative documents from [FiscalNote/billsum](https://huggingface.co/datasets/FiscalNote/billsum), fixed at benchmark level)
+
+**Run:**
+```bash
+python examples/benchmark_rag_simulation.py \
+    --host https://your-llm-endpoint.com \
+    --model your-model-name \
+    --engine vllm \
+    --tokenizer NousResearch/Meta-Llama-3.1-8B-Instruct
+```
+
+**Focus Areas:**
+- KV cache growth and GPU memory usage
+- Latency scaling with large token counts
+- Throughput impact vs short contexts
+- Memory management efficiency
+
+---
+
+### ✅ Test 1c: Code Generation Simulation
+**File:** `examples/benchmark_code_generation.py`
+
+**Objective:** Benchmark balanced input-output scenarios common in development assistance and code generation.
+
+**Workload Profile:**
+- **Input tokens:** ~512 per request
+- **Output tokens:** ~512 per request
+- **Interaction type:** Medium-sized prompts with equally long completions
+- **Duration:** 10 minutes (default)
+- **Concurrency:** 30 developer sessions (default)
+- **Rate:** Constant flow reflecting active programming cycles
+
+**Success Criteria:**
+- Median latency < 2 seconds
+- P99 latency < 5 seconds
+- Sustained throughput across all sessions
+- No degradation during continuous coding assistance
+
+**Use Cases:**
+AI-powered coding copilots, auto-completion engines, dev tool integrations where balanced input/output is typical.
+
+**Dataset:** Synthetic code generation prompts (Python, JavaScript, Java, Go tasks)
+
+**Run:**
+```bash
+python examples/benchmark_code_generation.py \
+    --host https://your-llm-endpoint.com \
+    --model your-model-name \
+    --engine vllm \
+    --tokenizer NousResearch/Meta-Llama-3.1-8B-Instruct
+```
+
+**Focus Areas:**
+- Balanced load performance (equal prompt/response sizes)
+- Developer workflow smoothness (median/tail latencies)
+- Multi-language code generation capability
+- Real-time coding assistance feasibility
+
+---
+
+### ✅ Test 2a: Constant Rate (Sustained Load)
+**File:** `examples/benchmark_constant_rate.py`
+
+**Objective:** Validate system reliability and performance under continuous, predictable workloads.
+
+**Workload Profile:**
+- **Input tokens:** ~512 per request
+- **Output tokens:** ~256 per request
+- **Interaction type:** Steady production-like traffic flow
+- **Duration:** 20 minutes (default)
+- **Concurrency:** 40 concurrent streams (default)
+- **Rate:** Fixed at 2 requests/second across all users
+
+**Success Criteria:**
+- No latency degradation over time
+- Throughput consistency (maintains target req/s)
+- Error rate < 0.1% for production readiness
+- Stable P99 latency throughout test
+
+**Use Cases:**
+Enterprise deployments with predictable usage patterns, such as internal productivity copilots or workflow automation tools.
+
+**Dataset:** ShareGPT (mixed conversational, fixed at benchmark level)
+
+**Run:**
+```bash
+python examples/benchmark_constant_rate.py \
+    --host https://your-llm-endpoint.com \
+    --model your-model-name \
+    --engine vllm \
+    --tokenizer NousResearch/Meta-Llama-3.1-8B-Instruct
+```
+
+**Custom Rate:**
+```bash
+# Test with different constant rate
+python examples/benchmark_constant_rate.py \
+    --host http://localhost:8000 \
+    --model your-model \
+    --engine vllm \
+    --request-rate 5.0 \
+    --users 50 \
+    --duration 1800
+```
+
+**Focus Areas:**
+- Long-term performance stability (no degradation)
+- Sustained throughput consistency
+- SLA compliance under steady load
+- Resource utilization patterns
+- Memory leak detection
+
+**Analysis Tips:**
+- Plot latency over time to detect gradual degradation
+- Check if actual req/s matches target throughout test
+- Compare P50/P90/P99 across different time buckets
+- Look for correlation between errors and specific time periods
+
+---
+
+### ✅ Test 2b: Poisson Rate (Bursty Traffic)
+**File:** `examples/benchmark_poisson_rate.py`
+
+**Objective:** Evaluate system robustness under irregular, unpredictable bursts of traffic.
+
+**Workload Profile:**
+- **Input tokens:** ~512 per request
+- **Output tokens:** ~256 per request
+- **Interaction type:** Requests arrive in sudden spikes, modeled with Poisson distribution
+- **Duration:** 15 minutes (default)
+- **Concurrency:** Varies dynamically (up to 100 concurrent during bursts)
+- **Rate:** Average 2 req/s, peak 10 req/s during bursts (5x multiplier)
+
+**Success Criteria:**
+- Low P99 latency during bursts
+- Fast recovery after burst periods
+- Error rate < 1% even during peaks
+- Graceful degradation under overload
+
+**Use Cases:**
+Real-world enterprise apps with spiky traffic, such as e-commerce assistants during flash sales, or knowledge tools during peak work hours.
+
+**Dataset:** ShareGPT (mixed conversational, fixed at benchmark level)
+
+**Run:**
+```bash
+python examples/benchmark_poisson_rate.py \
+    --host https://your-llm-endpoint.com \
+    --model your-model-name \
+    --engine vllm \
+    --tokenizer NousResearch/Meta-Llama-3.1-8B-Instruct
+```
+
+**Custom Burst Configuration:**
+```bash
+# Test with different burst parameters
+python examples/benchmark_poisson_rate.py \
+    --host http://localhost:8000 \
+    --model your-model \
+    --engine vllm \
+    --average-rate 3.0 \
+    --burst-factor 8.0 \
+    --max-users 150 \
+    --duration 900
+```
+
+**Focus Areas:**
+- Burst handling and queueing mechanisms
+- Tail latency during traffic spikes (P99)
+- Dynamic resource allocation
+- System recovery time post-burst
+- Error rates under overload conditions
+
+**Poisson Distribution Details:**
+- Requests follow exponential inter-arrival times
+- Bursts occur periodically (~every 2 minutes)
+- Each burst lasts ~30 seconds
+- Models real-world unpredictable traffic patterns
+
+**Analysis Tips:**
+- Plot latency over time to visualize burst impact
+- Compare P99 during burst vs normal periods
+- Measure system recovery time after bursts
+- Correlate error rates with traffic spikes
+- Analyze concurrent request counts during peaks
 
 ---
 

@@ -441,6 +441,8 @@ def load_billsum(
     BillSum contains US Congressional and California state bills (long documents).
     Ideal for testing long context handling and prefill performance.
 
+    Source: https://huggingface.co/datasets/FiscalNote/billsum
+
     Args:
         tokenizer: Tokenizer for counting input tokens
         min_input_length: Minimum prompt length (default: 1024 for long context)
@@ -459,21 +461,45 @@ def load_billsum(
         with open(cache_file) as f:
             dataset = [json.loads(line) for line in f if line.strip()][:num_samples]
     else:
-        logger.info(f"Downloading BillSum dataset ({num_samples} samples)")
-        # Using the test split for benchmarking
-        url = "https://huggingface.co/datasets/billsum/resolve/main/data/test.jsonl"
+        logger.info(f"Downloading BillSum dataset from FiscalNote/billsum ({num_samples} samples)")
+        # Using the test split for benchmarking (3,269 samples available)
+        # Dataset is in Parquet format - we'll download it via the Parquet files API
+        base_url = "https://huggingface.co/datasets/FiscalNote/billsum/resolve/main/data"
+        url = f"{base_url}/test-00000-of-00001.parquet"
 
         try:
-            response = requests.get(url, timeout=120, stream=True)
+            response = requests.get(url, timeout=120)
             response.raise_for_status()
 
-            dataset = []
-            for i, line in enumerate(response.iter_lines()):
-                if i >= num_samples:
-                    break
-                if line:
-                    dataset.append(json.loads(line))
+            # Save parquet file temporarily
+            import tempfile
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".parquet") as tmp:
+                tmp.write(response.content)
+                tmp_path = tmp.name
 
+            # Read parquet file
+            try:
+                import pandas as pd
+                df = pd.read_parquet(tmp_path)
+                dataset = df.to_dict('records')[:num_samples]
+            except ImportError:
+                # Fallback: try using pyarrow directly
+                try:
+                    import pyarrow.parquet as pq
+                    table = pq.read_table(tmp_path)
+                    df = table.to_pandas()
+                    dataset = df.to_dict('records')[:num_samples]
+                except ImportError:
+                    raise RuntimeError(
+                        "BillSum requires pandas or pyarrow to load. "
+                        "Install with: pip install pandas pyarrow"
+                    )
+            finally:
+                # Clean up temp file
+                import os
+                os.unlink(tmp_path)
+
+            # Cache as JSONL for faster future loading
             cache_file.parent.mkdir(parents=True, exist_ok=True)
             with open(cache_file, "w") as f:
                 for item in dataset:
@@ -498,7 +524,7 @@ def load_billsum(
 
         try:
             num_tokens = len(
-            tokenizer.apply_chat_template(
+                tokenizer.apply_chat_template(
                     chat,
                     tokenize=True,
                     add_generation_prompt=True,
@@ -513,6 +539,7 @@ def load_billsum(
                 "prompt": prompt_text,
                 "num_input_tokens": num_tokens,
                 "summary": item.get("summary", ""),
+                "title": item.get("title", ""),
             })
 
     logger.info(
