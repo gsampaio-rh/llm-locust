@@ -31,10 +31,35 @@ pip install -e .
 pip install -e ".[dev]"
 ```
 
+## 🎯 Benchmarks
+
+Standardized benchmark tests for evaluating LLM inference endpoint performance:
+
+```bash
+# Run Chat Simulation benchmark (Test 1a)
+# Target: 256 input tokens, 128 output tokens, 50 concurrent users
+python examples/benchmark_chat_simulation.py \
+    --host http://localhost:8000 \
+    --model your-model-name \
+    --engine vllm \
+    --tokenizer NousResearch/Meta-Llama-3.1-8B-Instruct
+```
+
+**Available Benchmarks:**
+- ✅ **Test 1a: Chat Simulation** - Conversational AI workload (256/128 tokens)
+- 🚧 Test 1b: RAG Simulation - Large context processing (4096/512 tokens)
+- 🚧 Test 1c: Code Generation - Balanced workload (512/512 tokens)
+- 🚧 Test 2a: Constant Rate - Sustained load testing
+- 🚧 Test 2b: Poisson Rate - Bursty traffic patterns
+
+See [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) for detailed benchmark documentation.
+
 ## 📚 Documentation
 
 Comprehensive documentation is available in the [`docs/`](docs/) directory:
 
+- **[Benchmark Guide](docs/BENCHMARKS.md)** - Running standardized benchmarks
+- **[Benchmark Specifications](docs/TESTS.md)** - Detailed test requirements
 - **[Datasets Guide](docs/DATASETS.md)** - Supported datasets (Dolly, ShareGPT, custom)
 - **[Architecture Guide](docs/ARCHITECTURE.md)** - System design and internals
 - **[Metrics Guide](docs/METRICS_GUIDE.md)** - Complete metrics reference

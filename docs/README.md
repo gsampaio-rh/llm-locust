@@ -77,6 +77,37 @@ Detailed analysis of which industry-standard KPIs are available.
 
 ### Reference Documentation
 
+#### [Benchmark Guide](BENCHMARKS.md)
+Complete guide to running standardized benchmark tests with examples and analysis.
+
+**Topics covered:**
+- Available benchmarks and how to run them
+- Output format and file naming
+- Analyzing results with example code
+- Best practices and troubleshooting
+- Customizing benchmarks
+
+**Read this if you want to:**
+- Run standardized performance tests
+- Understand benchmark output files
+- Analyze benchmark results
+- Customize benchmarks for your needs
+
+#### [Benchmark Specifications](TESTS.md)
+Detailed technical specifications for each benchmark test.
+
+**Topics covered:**
+- Chat Simulation (Test 1a) - 256/128 tokens
+- RAG Simulation (Test 1b) - 4096/512 tokens
+- Code Generation (Test 1c) - 512/512 tokens
+- Constant Rate Testing (Test 2a)
+- Poisson Rate Testing (Test 2b)
+
+**Read this if you want to:**
+- Understand benchmark requirements and objectives
+- Design custom benchmarks based on specs
+- Compare against industry standards
+
 #### [Refactoring Summary](REFACTORING_SUMMARY.md)
 Complete history of changes from the original repository.
 
@@ -99,6 +130,9 @@ Complete history of changes from the original repository.
 
 **I want to run a basic load test:**
 → Start with [Main README](../README.md) and [examples/simple_test.py](../examples/simple_test.py)
+
+**I want to run standardized benchmarks:**
+→ See [Benchmark Specifications](TESTS.md) and [Benchmark Guide](BENCHMARKS.md)
 
 **I want to understand the metrics:**
 → Read [Metrics Guide](METRICS_GUIDE.md)
