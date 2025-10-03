@@ -115,6 +115,133 @@ def load_databricks_dolly(
     return prompts
 
 
+def load_sharegpt(
+    tokenizer: PreTrainedTokenizerBase,
+    min_input_length: int = 0,
+    max_input_length: int = 2048,
+    cache_dir: Path | None = None,
+    num_samples: int | None = None,
+) -> list[dict[str, Any]]:
+    """
+    Load ShareGPT dataset for conversational prompts.
+
+    ShareGPT contains real user conversations, ideal for testing chat models.
+
+    Args:
+        tokenizer: Tokenizer for counting input tokens
+        min_input_length: Minimum prompt length in tokens
+        max_input_length: Maximum prompt length in tokens
+        cache_dir: Directory to cache dataset (default: current directory)
+        num_samples: Limit number of samples (None = all)
+
+    Returns:
+        List of prompt dictionaries with 'prompt' and 'num_input_tokens' keys
+    """
+    cache_file = (cache_dir or Path.cwd()) / "sharegpt.jsonl"
+
+    # Load from cache if available
+    if cache_file.exists():
+        logger.info(f"Loading cached ShareGPT dataset from {cache_file}")
+        with open(cache_file) as f:
+            dataset = [json.loads(line) for line in f if line.strip()]
+            if num_samples:
+                dataset = dataset[:num_samples]
+    else:
+        logger.info("Downloading ShareGPT dataset (this may take a while...)")
+        url = "https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json"
+
+        try:
+            response = requests.get(url, timeout=300)
+            response.raise_for_status()
+            dataset = response.json()
+
+            # Cache as JSONL
+            cache_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(cache_file, "w") as f:
+                for item in dataset:
+                    f.write(json.dumps(item) + "\n")
+
+            logger.info(f"Dataset downloaded and cached to {cache_file}")
+
+            if num_samples:
+                dataset = dataset[:num_samples]
+
+        except requests.RequestException as e:
+            logger.error(f"Failed to download ShareGPT dataset: {e}")
+            raise RuntimeError(f"Could not download ShareGPT dataset: {e}") from e
+
+    # Process ShareGPT conversations
+    prompts: list[dict[str, Any]] = []
+    for item in dataset:
+        conversations = item.get("conversations", [])
+        if not conversations:
+            continue
+
+        # Build chat from conversations
+        chat = []
+        for msg in conversations:
+            role_map = {
+                "human": "user",
+                "gpt": "assistant",
+                "system": "system",
+                "user": "user",
+                "assistant": "assistant",
+            }
+            role = role_map.get(msg.get("from", "").lower(), "user")
+            content = msg.get("value", "")
+
+            if content:
+                chat.append({"role": role, "content": content})
+
+        # Only use conversations with at least one user message
+        if not any(msg["role"] == "user" for msg in chat):
+            continue
+
+        # For load testing, use only up to first user message
+        first_user_idx = next(
+            (i for i, msg in enumerate(chat) if msg["role"] == "user"),
+            None
+        )
+
+        if first_user_idx is None:
+            continue
+
+        # Take messages up to and including first user message
+        test_chat = chat[:first_user_idx + 1]
+        user_prompt = test_chat[-1]["content"]
+
+        try:
+            num_tokens = len(
+                tokenizer.apply_chat_template(
+                    test_chat,
+                    tokenize=True,
+                    add_generation_prompt=True,
+                )
+            )
+        except Exception as e:
+            logger.warning(f"Failed to tokenize ShareGPT prompt: {e}")
+            continue
+
+        if min_input_length <= num_tokens <= max_input_length:
+            prompts.append({
+                "prompt": user_prompt,
+                "num_input_tokens": num_tokens,
+                "conversation": test_chat,
+            })
+
+    logger.info(
+        f"Loaded {len(prompts)} ShareGPT prompts "
+        f"(filtered from {len(dataset)} with {min_input_length}-{max_input_length} tokens)"
+    )
+
+    if not prompts:
+        raise ValueError(
+            f"No ShareGPT prompts found within token range {min_input_length}-{max_input_length}"
+        )
+
+    return prompts
+
+
 def load_custom_prompts(
     tokenizer: PreTrainedTokenizerBase,
     prompts_file: Path,
