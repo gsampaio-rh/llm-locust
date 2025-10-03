@@ -58,8 +58,15 @@ class PerRequestLogger:
         self.output_file.parent.mkdir(parents=True, exist_ok=True)
 
         # Initialize CSV file with headers
-        if self.format == "csv" and not self.output_file.exists():
-            self._write_csv_header()
+        if self.format == "csv":
+            # Write headers if file doesn't exist or is empty
+            if not self.output_file.exists() or self.output_file.stat().st_size == 0:
+                self._write_csv_header()
+            else:
+                logger.warning(
+                    f"Appending to existing CSV file: {self.output_file}. "
+                    "Delete file if you want a fresh start."
+                )
 
         logger.info(f"Per-request logging enabled: {self.output_file}")
 
