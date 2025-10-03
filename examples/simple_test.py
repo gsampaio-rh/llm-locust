@@ -139,6 +139,24 @@ def main() -> None:
         help="Show summary every N requests instead of each request (default: 10)",
     )
     parser.add_argument(
+        "--include-text",
+        action="store_true",
+        default=True,
+        help="Include input prompt and output text in CSV (default: True)",
+    )
+    parser.add_argument(
+        "--no-include-text",
+        action="store_false",
+        dest="include_text",
+        help="Disable including text in CSV (metrics only)",
+    )
+    parser.add_argument(
+        "--max-text-length",
+        type=int,
+        default=500,
+        help="Maximum text length to save in CSV (default: 500 chars)",
+    )
+    parser.add_argument(
         "--output-file",
         type=str,
         default="results/per_request_metrics.csv",
@@ -261,6 +279,8 @@ def main() -> None:
             format=args.output_format,
             print_to_console=args.log_to_console,
             summary_interval=args.summary_interval,
+            include_text=args.include_text,
+            max_text_length=args.max_text_length,
         )
 
     # Start metrics collector

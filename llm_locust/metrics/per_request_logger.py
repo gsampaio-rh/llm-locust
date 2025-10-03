@@ -34,6 +34,8 @@ class PerRequestLogger:
         format: str = "csv",
         print_to_console: bool = False,
         summary_interval: int = 10,
+        include_text: bool = True,
+        max_text_length: int = 500,
     ) -> None:
         """
         Initialize per-request logger.
@@ -43,11 +45,15 @@ class PerRequestLogger:
             format: Output format ('csv' or 'jsonl')
             print_to_console: Also print to console
             summary_interval: Print summary every N requests (0 = print all)
+            include_text: Include input prompt and output text in logs
+            max_text_length: Maximum text length to log (prevents huge CSVs)
         """
         self.output_file = Path(output_file)
         self.format = format.lower()
         self.print_to_console = print_to_console
         self.summary_interval = summary_interval
+        self.include_text = include_text
+        self.max_text_length = max_text_length
         self.request_count = 0
         
         # Per-user tracking
@@ -74,7 +80,7 @@ class PerRequestLogger:
         """Write CSV header row."""
         with open(self.output_file, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow([
+            headers = [
                 "request_id",
                 "timestamp",
                 "user_id",
@@ -87,7 +93,10 @@ class PerRequestLogger:
                 "total_tokens_per_sec",
                 "output_tokens_per_sec",
                 "status_code",
-            ])
+            ]
+            if self.include_text:
+                headers.extend(["input_prompt", "output_text"])
+            writer.writerow(headers)
 
     def log_request(
         self,
@@ -103,11 +112,13 @@ class PerRequestLogger:
         """
         self.request_count += 1
 
-        # Calculate output token count
+        # Calculate output token count and decode text
         output_tokens = 0
+        output_token_ids: list[int] = []
         for chunk in request_log.result_chunks:
             tokens = model_client.parse_response(chunk)
             output_tokens += len(tokens)
+            output_token_ids.extend(tokens)
 
         # Calculate timing metrics
         total_duration_s = request_log.end_time - request_log.start_time
@@ -131,6 +142,31 @@ class PerRequestLogger:
         total_tokens_per_sec = total_tokens / total_duration_s if total_duration_s > 0 else 0
         output_tokens_per_sec = output_tokens / total_duration_s if total_duration_s > 0 else 0
 
+        # Decode output text if requested
+        input_prompt = ""
+        output_text = ""
+        if self.include_text:
+            # TODO: Input prompt not currently stored in RequestSuccessLog
+            # Would need to modify core data flow to include it
+            # For now, input_prompt will be empty
+            input_prompt = f"[{request_log.num_input_tokens} tokens]"
+            
+            # Decode output tokens
+            try:
+                if output_token_ids:
+                    output_text = model_client.tokenizer.decode(
+                        output_token_ids,
+                        skip_special_tokens=True,
+                    )
+                    # Truncate if too long
+                    if len(output_text) > self.max_text_length:
+                        output_text = output_text[:self.max_text_length] + "..."
+                else:
+                    output_text = "[empty output]"
+            except Exception as e:
+                logger.debug(f"Failed to decode output text: {e}")
+                output_text = "[decode failed]"
+
         metrics = {
             "request_id": self.request_count,
             "timestamp": request_log.timestamp,
@@ -144,6 +180,10 @@ class PerRequestLogger:
             "output_tokens_per_sec": round(output_tokens_per_sec, 2),
             "status_code": request_log.status_code,
         }
+        
+        if self.include_text:
+            metrics["input_prompt"] = input_prompt
+            metrics["output_text"] = output_text
 
         # Track per-user stats
         user_id = request_log.user_id
@@ -170,7 +210,7 @@ class PerRequestLogger:
         """Write metrics row to CSV."""
         with open(self.output_file, "a", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow([
+            row = [
                 metrics["request_id"],
                 metrics["timestamp"],
                 metrics["user_id"],
@@ -183,7 +223,13 @@ class PerRequestLogger:
                 metrics["total_tokens_per_sec"],
                 metrics["output_tokens_per_sec"],
                 metrics["status_code"],
-            ])
+            ]
+            if self.include_text:
+                row.extend([
+                    metrics.get("input_prompt", ""),
+                    metrics.get("output_text", ""),
+                ])
+            writer.writerow(row)
 
     def _write_jsonl_row(self, metrics: dict[str, Any]) -> None:
         """Write metrics row to JSONL."""
