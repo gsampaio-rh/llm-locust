@@ -1,14 +1,15 @@
 """
-Benchmark Test 1c: Code Generation Simulation (512 input / 512 output tokens)
+Benchmark Test 1c: Code Generation Simulation (80-200 input / 512 output tokens)
 
 Objective:
-    Benchmark balanced input-output scenarios common in development assistance 
-    and code generation.
+    Benchmark realistic code generation scenarios common in development assistance.
+    Real-world code generation prompts are typically concise (80-200 tokens),
+    with longer generated outputs.
 
 Workload Profile:
-    - Input tokens: ~512 per request
+    - Input tokens: 80-200 per request (realistic code prompts)
     - Output tokens: ~512 per request
-    - Interaction type: Medium-sized prompts with equally long completions
+    - Interaction type: Concise prompts with substantial code completions
 
 Test Parameters:
     - Duration: 5-10 minutes (default: 600s)
@@ -16,9 +17,10 @@ Test Parameters:
     - Rate: Constant flow of requests, reflecting active programming cycles
 
 Benchmark Focus:
-    - Balanced Load: Measures efficiency when both prompt parsing and generation are significant
+    - Generation Performance: Measures efficiency with short prompts but substantial output
     - Latency: Focus on median and tail latencies for developer workflow smoothness
     - Throughput: Can the system sustain multiple code completions in parallel?
+    - Real-world Simulation: Mimics actual code assistant usage patterns
 
 Business Context:
     AI-powered coding copilots, auto-completion engines, or dev tool integrations 
@@ -66,8 +68,8 @@ TARGET_OUTPUT_TOKENS = 512
 DEFAULT_DURATION = 600  # 10 minutes
 DEFAULT_USERS = 30
 DEFAULT_SPAWN_RATE = 3.0  # Users per second
-INPUT_TOKEN_MIN = 400  # ~512 target with some variance
-INPUT_TOKEN_MAX = 600
+INPUT_TOKEN_MIN = 80   # Adjusted for realistic code prompts
+INPUT_TOKEN_MAX = 200  # Code prompts are typically concise
 
 # Per-request logging defaults
 LOG_TO_CONSOLE = True
@@ -147,6 +149,28 @@ def generate_code_prompts(tokenizer: AutoTokenizer, target_tokens: int = 512) ->
         "maintainable code."
     )
     
+    # Test tokenization method first
+    test_chat = [
+        {"role": "system", "content": "test"},
+        {"role": "user", "content": "test"},
+    ]
+    
+    use_chat_template = True
+    try:
+        _ = tokenizer.apply_chat_template(
+            test_chat,
+            tokenize=True,
+            add_generation_prompt=True,
+        )
+        logger.info("✅ Using chat template for tokenization")
+    except Exception as e:
+        logger.warning(f"⚠️  Chat template not working: {e}")
+        logger.warning("   Falling back to direct tokenization")
+        use_chat_template = False
+    
+    # Track token counts for debugging
+    all_token_counts = []
+    
     for prompt_text in CODE_GENERATION_PROMPTS:
         # Create multiple variations by adding context
         variations = [
@@ -156,19 +180,26 @@ def generate_code_prompts(tokenizer: AutoTokenizer, target_tokens: int = 512) ->
         ]
         
         for variation in variations:
-            chat = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": variation},
-            ]
-            
             try:
-                num_tokens = len(
-                    tokenizer.apply_chat_template(
-                        chat,
-                        tokenize=True,
-                        add_generation_prompt=True,
+                if use_chat_template:
+                    chat = [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": variation},
+                    ]
+                    num_tokens = len(
+                        tokenizer.apply_chat_template(
+                            chat,
+                            tokenize=True,
+                            add_generation_prompt=True,
+                        )
                     )
-                )
+                else:
+                    # Fallback: tokenize combined text
+                    combined_text = f"{system_prompt}\n\n{variation}"
+                    num_tokens = len(tokenizer.encode(combined_text))
+                
+                # Track all token counts
+                all_token_counts.append(num_tokens)
                 
                 # Accept prompts within range
                 if INPUT_TOKEN_MIN <= num_tokens <= INPUT_TOKEN_MAX:
@@ -178,8 +209,21 @@ def generate_code_prompts(tokenizer: AutoTokenizer, target_tokens: int = 512) ->
                         "system_prompt": system_prompt,
                     })
             except Exception as e:
-                logger.warning(f"Failed to tokenize prompt: {e}")
+                logger.error(f"Failed to tokenize prompt: {e}")
+                logger.error(f"Prompt preview: {variation[:100]}...")
                 continue
+    
+    # Report token count statistics
+    if all_token_counts:
+        min_tokens = min(all_token_counts)
+        max_tokens = max(all_token_counts)
+        avg_tokens = sum(all_token_counts) / len(all_token_counts)
+        logger.info(f"   Token count range: {min_tokens} - {max_tokens} (avg: {avg_tokens:.0f})")
+        logger.info(f"   Target range: {INPUT_TOKEN_MIN} - {INPUT_TOKEN_MAX}")
+        
+        if len(prompts) == 0:
+            logger.error(f"   ⚠️  No prompts match target range!")
+            logger.error(f"   Consider adjusting INPUT_TOKEN_MIN/MAX or using shorter/longer prompts")
     
     logger.info(f"Generated {len(prompts)} code generation prompts")
     return prompts
@@ -287,9 +331,9 @@ def main() -> None:
     logger.info("=" * 80)
     logger.info("")
     logger.info("📋 Benchmark Specification:")
-    logger.info(f"  • Target Input Tokens:  ~{TARGET_INPUT_TOKENS} tokens")
+    logger.info(f"  • Input Token Range:    {INPUT_TOKEN_MIN}-{INPUT_TOKEN_MAX} tokens (realistic code prompts)")
     logger.info(f"  • Target Output Tokens: ~{TARGET_OUTPUT_TOKENS} tokens")
-    logger.info(f"  • Workload Type:        Code Generation (balanced input/output)")
+    logger.info(f"  • Workload Type:        Code Generation (short prompt, long output)")
     logger.info(f"  • Success Criteria:     Median latency <2s, P99 <5s")
     logger.info("")
     logger.info("🎯 Target Configuration:")
@@ -312,15 +356,16 @@ def main() -> None:
     logger.info(f"  • Log Interval: {'All requests' if SUMMARY_INTERVAL == 0 else f'Every {SUMMARY_INTERVAL}th request'}")
     logger.info("")
     logger.info("🎯 Focus Areas:")
-    logger.info("  • Balanced Load Performance")
+    logger.info("  • Code Generation Performance (short input, long output)")
     logger.info("  • Median & Tail Latency (P50, P90, P99)")
     logger.info("  • Sustained Throughput")
     logger.info("  • Developer Workflow Smoothness")
+    logger.info("  • Real-world Code Assistant Simulation")
     logger.info("")
     logger.info("💡 Code Generation Context:")
     logger.info("  • Simulates real-world coding assistant usage")
     logger.info("  • Mix of Python, JavaScript, Java, Go tasks")
-    logger.info("  • Balanced prompt/response for realistic workload")
+    logger.info("  • Concise prompts with substantial code generation")
     logger.info("  • Tests model performance on technical content")
     logger.info("")
     logger.info("=" * 80)
@@ -329,13 +374,17 @@ def main() -> None:
     # Load tokenizer
     logger.info(f"📦 Loading tokenizer: {args.tokenizer}")
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
-    if not tokenizer.chat_template:
-        tokenizer.chat_template = "{{prompt}}"
+    
+    # Debug tokenizer info
+    logger.info(f"   Tokenizer type: {type(tokenizer).__name__}")
+    logger.info(f"   Has chat template: {bool(tokenizer.chat_template)}")
+    if tokenizer.chat_template:
+        logger.info(f"   Chat template preview: {str(tokenizer.chat_template)[:100]}...")
 
     # Generate code prompts
     logger.info(f"🔧 Generating {DATASET_NAME.upper()} prompts...")
-    logger.info(f"   Targeting ~{TARGET_INPUT_TOKENS} input tokens")
-    logger.info(f"   ({INPUT_TOKEN_MIN}-{INPUT_TOKEN_MAX} token range)")
+    logger.info(f"   Token range: {INPUT_TOKEN_MIN}-{INPUT_TOKEN_MAX} tokens")
+    logger.info(f"   (Realistic code generation prompts are typically concise)")
     
     prompts = generate_code_prompts(tokenizer, TARGET_INPUT_TOKENS)
     
@@ -419,11 +468,12 @@ def main() -> None:
         logger.info(f"📊 Results saved to: {output_file}")
         logger.info("")
         logger.info("📈 Next Steps:")
-        logger.info("   1. Analyze balanced load performance (512/512 tokens)")
+        logger.info("   1. Analyze code generation performance (short input, long output)")
         logger.info("   2. Review median latency (target: <2s for smooth workflow)")
         logger.info("   3. Check tail latency (P99 target: <5s)")
         logger.info("   4. Compare throughput vs Test 1a (chat) and Test 1b (RAG)")
         logger.info("   5. Assess suitability for real-time coding assistance")
+        logger.info("   6. Review token efficiency: input vs output ratio")
         logger.info("")
         per_request_logger.print_summary()
         logger.info("=" * 80)
