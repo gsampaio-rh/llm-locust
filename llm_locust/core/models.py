@@ -66,6 +66,7 @@ class RequestSuccessLog:
     end_time: float
     status_code: int
     user_id: int = 0  # Which user made this request
+    input_prompt: str = ""  # The actual input prompt text
 
 
 @dataclasses.dataclass(frozen=True)

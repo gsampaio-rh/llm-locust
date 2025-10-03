@@ -25,24 +25,85 @@ Build a **production-grade Streamlit dashboard** for visualizing, comparing, and
 - Comparing platforms is time-consuming and error-prone
 - No standardized way to share results with stakeholders
 - Insights are buried in spreadsheets or ad-hoc notebooks
+- **Technical complexity creates barriers**: Metrics like TTFT, TPOT, P99 are intimidating to non-experts
 
 **Impact:**
 - Infrastructure decisions based on incomplete analysis
 - Wasted time on repetitive analysis tasks
 - Difficulty communicating performance trade-offs to non-technical stakeholders
 - Missed optimization opportunities due to lack of visibility
+- **Exclusion of key decision-makers** who don't understand the technical details
 
-### 1.2 Target Users
+### 1.2 Target Users (Dual Personas)
 
-**Primary Users:**
-1. **Platform Engineers** - Making infrastructure decisions, capacity planning
-2. **ML Engineers** - Optimizing model serving configurations
-3. **Engineering Managers** - Understanding cost/performance trade-offs
+**🎯 Primary Goal: "Make it simple enough for a PM, powerful enough for a Principal Engineer"**
 
-**Secondary Users:**
-4. **Product Managers** - Understanding latency impact on UX
-5. **Finance/Ops** - Cost analysis and forecasting
-6. **Executives** - High-level performance summaries
+#### Persona 1: "The Decision Maker" (Beginner/Business)
+**Who:** Product Managers, Engineering Managers, Executives, New Engineers
+
+**Needs:**
+- **Simple answer**: "Which platform is faster?"
+- **Clear visualization**: Understand at a glance
+- **Plain English**: No jargon, explain what matters
+- **Business context**: Cost, user experience, reliability
+- **Confidence**: Know the recommendation is trustworthy
+
+**Pain Points:**
+- Intimidated by technical metrics
+- Don't know what "P99" means or why it matters
+- Need to make decisions without deep ML knowledge
+- Want to understand trade-offs simply
+
+**Quote:** *"I just need to know: Will users notice the difference?"*
+
+#### Persona 2: "The Engineer" (Advanced/Technical)
+**Who:** Platform Engineers, ML Engineers, SREs, Performance Specialists
+
+**Needs:**
+- **Deep analysis**: Statistical significance, distributions, outliers
+- **Raw data access**: Export, drill-down, custom views
+- **Technical precision**: Exact percentiles, confidence intervals
+- **Comparative analysis**: Side-by-side, temporal patterns
+- **Debug capability**: Find anomalies, investigate failures
+
+**Pain Points:**
+- Simplified views hide important details
+- Need access to raw metrics for debugging
+- Want to verify statistical significance
+- Need to explain technical decisions to non-technical stakeholders
+
+**Quote:** *"I need to see the P99.9 tail latency and prove this isn't just noise."*
+
+### 1.3 Design Philosophy: "Progressive Disclosure"
+
+**Inspired by:** Steve Jobs' "It just works" + Bret Victor's "Explorable Explanations"
+
+**Core Principles:**
+
+1. **Default to Simple, Allow Complexity**
+   - Start with the answer ("vLLM is faster")
+   - One click to see why (charts)
+   - Another click for deep technical details
+
+2. **Tell a Story, Not Just Data**
+   - Every metric explained in human terms
+   - Context before numbers
+   - "What this means for you" summaries
+
+3. **Progressive Disclosure**
+   - Beginners see: "✅ Fast" or "⚠️ Slower"
+   - Intermediate: Charts and percentiles
+   - Advanced: Statistical tests, raw data, distributions
+
+4. **No Jargon Without Explanation**
+   - Every technical term gets a tooltip
+   - Inline explanations in plain English
+   - "Why this matters" context
+
+5. **Beautiful AND Functional**
+   - Clean, uncluttered interface
+   - Information density increases with complexity
+   - Consistent visual language
 
 ---
 
@@ -204,12 +265,30 @@ Acceptance Criteria:
 
 ### 4.2 Visualization & Analytics
 
-#### FR-4: Overview Dashboard
-- **FR-4.1** Summary cards: total requests, success rate, avg throughput
-- **FR-4.2** Platform comparison table (P50/P90/P99 for TTFT, TPOT)
-- **FR-4.3** Quick-win insights (auto-generated recommendations)
-- **FR-4.4** Data quality indicators
-- **FR-4.5** Export overview as PDF/PNG
+#### FR-4: Overview Dashboard (Dual Mode)
+- **FR-4.1** **Mode Toggle**: Switch between Simple and Advanced views
+- **FR-4.2** **Simple Mode Features**:
+  - Clear recommendation ("We recommend X")
+  - Plain English explanations (no jargon)
+  - Visual indicators (🟢🟡🔴 for speed, stars for reliability)
+  - "What This Means For You" business context
+  - Progressive disclosure buttons to drill deeper
+- **FR-4.3** **Advanced Mode Features**:
+  - Summary cards: total requests, success rate, avg throughput
+  - Platform comparison table (P50/P90/P99 for TTFT, TPOT)
+  - Statistical significance indicators
+  - Data quality indicators
+  - Technical insights with p-values
+- **FR-4.4** **Universal Features** (both modes):
+  - Quick-win insights (auto-generated)
+  - Winner badges/highlighting
+  - Export overview as PDF/PNG
+  
+#### FR-4.5: Contextual Help System
+- **FR-4.5.1** Inline tooltips for all technical terms
+- **FR-4.5.2** "What is this?" help icons with expandable explanations
+- **FR-4.5.3** Glossary page with definitions and examples
+- **FR-4.5.4** Sample data mode for learning without real benchmarks
 
 #### FR-5: Latency Analysis
 - **FR-5.1** **TTFT Distribution**: Histogram + KDE for each platform
@@ -548,21 +627,64 @@ def generate_insights(
 
 ### 7.2 Page Designs
 
-#### 7.2.1 Overview Dashboard
+#### 7.2.1 Overview Dashboard (NEW: Two Modes)
 
-**Layout:**
+**🎨 Simple Mode (Default):**
+```
+┌─────────────────────────────────────────────────┐
+│  Which LLM Platform Should You Choose?          │
+│  Simple, data-driven comparison                 │
+├─────────────────────────────────────────────────┤
+│  [Upload Your Benchmark Files ▼]                │
+├─────────────────────────────────────────────────┤
+│  📊 THE ANSWER                                  │
+│  ┌───────────────────────────────────────────┐ │
+│  │  🏆 We recommend: vLLM                     │ │
+│  │                                            │ │
+│  │  Why?                                      │ │
+│  │  ✅ 19% faster response time              │ │
+│  │  ✅ Handles 99.8% of requests successfully│ │
+│  │  ✅ Most consistent performance           │ │
+│  │                                            │ │
+│  │  [See Why in Detail →]                    │ │
+│  └───────────────────────────────────────────┘ │
+├─────────────────────────────────────────────────┤
+│  📈 Quick Comparison                            │
+│  ┌─────────────────────────────────────────┐   │
+│  │  Response Speed (how fast users see text)│   │
+│  │  🟢 vLLM      ████████████ Fast          │   │
+│  │  🟡 TGI       ████████░░░░ Medium        │   │
+│  │  🔴 Ollama    ██████░░░░░░ Slower        │   │
+│  │                                          │   │
+│  │  Reliability (how often it works)        │   │
+│  │  🟢 vLLM      99.8% ⭐                   │   │
+│  │  🟢 TGI       99.7% ⭐                   │   │
+│  │  🟡 Ollama    98.9%                      │   │
+│  └─────────────────────────────────────────┘   │
+│                                                  │
+│  💡 What This Means For You                     │
+│  • Your users will get responses ~200ms faster │
+│  • 99.8% uptime = only 1-2 failures per 1000   │
+│  • You can handle 20% more concurrent users    │
+│                                                  │
+│  [🔬 Show Me The Technical Details]             │
+└─────────────────────────────────────────────────┘
+```
+
+**🔬 Advanced Mode (Toggle):**
 ```
 ┌─────────────────────────────────────────────────┐
 │  🎯 LLM Benchmark Comparison Dashboard          │
-│  📁 Upload CSVs | 🗑️ Clear All | ⚙️ Settings     │
+│  📁 Upload CSVs | 🗑️ Clear All | [💡Simple Mode]│
 ├─────────────────────────────────────────────────┤
 │  📂 Loaded Benchmarks (3)                       │
 │  ┌─────────┬─────────┬─────────┐               │
 │  │ vLLM    │ TGI     │ Ollama  │               │
 │  │ ✅ Valid │ ✅ Valid │ ⚠️ Warn │               │
+│  │ 10K req │ 10K req │ 1.5K req│               │
 │  └─────────┴─────────┴─────────┘               │
 ├─────────────────────────────────────────────────┤
-│  📊 Quick Comparison                            │
+│  📊 Comparative Metrics                         │
 │  ┌────────────┬────────┬────────┬────────┐     │
 │  │ Metric     │ vLLM   │ TGI    │ Ollama │     │
 │  ├────────────┼────────┼────────┼────────┤     │
@@ -571,14 +693,15 @@ def generate_insights(
 │  │ TPOT P50   │ 12.3ms │ 11.8ms🏆│ 15.2ms │     │
 │  │ Throughput │ 1.2K🏆 │ 1.1K   │ 0.9K   │     │
 │  │ Success    │ 99.8%🏆│ 99.7%  │ 98.9%  │     │
+│  │ RPS        │ 16.7   │ 16.5   │ 2.5    │     │
 │  └────────────┴────────┴────────┴────────┘     │
 ├─────────────────────────────────────────────────┤
-│  💡 Key Insights                                │
-│  • vLLM shows 19% lower P99 latency than TGI   │
-│  • TGI has slightly better TPOT (4% faster)    │
-│  • Ollama shows 15% degradation after 5min     │
-│  • All platforms meet <1s TTFT SLA             │
-│  [View Detailed Analysis →]                     │
+│  💡 Automated Insights                          │
+│  • vLLM: 19% lower P99 latency (p<0.01, significant)│
+│  • TGI: 4% better TPOT but higher variance     │
+│  • Ollama: Performance degrades 15% after 5min │
+│  • All platforms meet <1s TTFT SLA threshold   │
+│  [View Statistical Analysis →]                  │
 └─────────────────────────────────────────────────┘
 ```
 

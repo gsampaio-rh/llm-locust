@@ -151,10 +151,12 @@ class PerRequestLogger:
         input_prompt = ""
         output_text = ""
         if self.include_text:
-            # TODO: Input prompt not currently stored in RequestSuccessLog
-            # Would need to modify core data flow to include it
-            # For now, input_prompt will be empty
-            input_prompt = f"[{request_log.num_input_tokens} tokens]"
+            # Use the actual input prompt from the request log
+            input_prompt = request_log.input_prompt
+            
+            # Truncate input prompt if too long
+            if len(input_prompt) > self.max_text_length:
+                input_prompt = input_prompt[:self.max_text_length] + "..."
             
             # Decode output tokens
             try:

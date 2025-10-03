@@ -113,6 +113,7 @@ class User:
                                 end_time=end_time,
                                 status_code=response.status,
                                 user_id=self.user_id,
+                                input_prompt=input_data.get("prompt", ""),
                             )
                         )
                 except Exception as e:
