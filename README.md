@@ -35,6 +35,7 @@ pip install -e ".[dev]"
 
 Comprehensive documentation is available in the [`docs/`](docs/) directory:
 
+- **[Datasets Guide](docs/DATASETS.md)** - Supported datasets (Dolly, ShareGPT, custom)
 - **[Architecture Guide](docs/ARCHITECTURE.md)** - System design and internals
 - **[Metrics Guide](docs/METRICS_GUIDE.md)** - Complete metrics reference
 - **[Metrics Coverage](docs/METRICS_COVERAGE.md)** - KPI analysis and mapping

@@ -19,7 +19,14 @@ from llm_locust.clients.openai import OpenAIChatStreamingClient
 from llm_locust.core.spawner import start_user_loop
 from llm_locust.metrics.collector import MetricsCollector
 from llm_locust.metrics.per_request_logger import PerRequestLogger
-from llm_locust.utils.prompts import load_databricks_dolly, SYSTEM_PROMPT
+from llm_locust.utils.prompts import (
+    load_databricks_dolly,
+    load_sharegpt,
+    load_cnn_dailymail,
+    load_billsum,
+    load_infinity_instruct,
+    SYSTEM_PROMPT,
+)
 
 # Setup logging
 logging.basicConfig(
@@ -109,6 +116,13 @@ def main() -> None:
         help="Maximum prompt length in tokens (default: 500)",
     )
     parser.add_argument(
+        "--dataset",
+        type=str,
+        choices=["dolly", "sharegpt", "cnn_dailymail", "billsum", "infinity_instruct"],
+        default="dolly",
+        help="Dataset to use for prompts (default: dolly)",
+    )
+    parser.add_argument(
         "--log-per-request",
         action="store_true",
         help="Enable per-request metrics logging",
@@ -159,6 +173,7 @@ def main() -> None:
     logger.info("Request Configuration:")
     logger.info(f"  🔤 Max Tokens:  {args.max_tokens}")
     logger.info(f"  📝 Input Range: {args.prompt_min_tokens}-{args.prompt_max_tokens} tokens")
+    logger.info(f"  📊 Dataset:     {args.dataset.upper()}")
     logger.info("")
     if args.log_per_request:
         logger.info("Per-Request Logging:")
@@ -182,12 +197,40 @@ def main() -> None:
         tokenizer.chat_template = "{{prompt}}"
 
     # Load prompts
-    logger.info("📚 Loading prompt dataset...")
-    prompts = load_databricks_dolly(
-        tokenizer,
-        min_input_length=args.prompt_min_tokens,
-        max_input_length=args.prompt_max_tokens,
-    )
+    logger.info(f"📚 Loading {args.dataset.upper()} dataset...")
+    if args.dataset == "dolly":
+        prompts = load_databricks_dolly(
+            tokenizer,
+            min_input_length=args.prompt_min_tokens,
+            max_input_length=args.prompt_max_tokens,
+        )
+    elif args.dataset == "sharegpt":
+        prompts = load_sharegpt(
+            tokenizer,
+            min_input_length=args.prompt_min_tokens,
+            max_input_length=args.prompt_max_tokens,
+        )
+    elif args.dataset == "cnn_dailymail":
+        prompts = load_cnn_dailymail(
+            tokenizer,
+            min_input_length=args.prompt_min_tokens,
+            max_input_length=args.prompt_max_tokens,
+        )
+    elif args.dataset == "billsum":
+        prompts = load_billsum(
+            tokenizer,
+            min_input_length=args.prompt_min_tokens,
+            max_input_length=args.prompt_max_tokens,
+        )
+    elif args.dataset == "infinity_instruct":
+        prompts = load_infinity_instruct(
+            tokenizer,
+            min_input_length=args.prompt_min_tokens,
+            max_input_length=args.prompt_max_tokens,
+        )
+    else:
+        raise ValueError(f"Unknown dataset: {args.dataset}")
+    
     logger.info(f"✅ Loaded {len(prompts)} prompts")
 
     # Create client

@@ -10,6 +10,22 @@ Welcome to the LLM Locust documentation! This directory contains comprehensive g
 
 ### Core Documentation
 
+#### [Datasets Guide](DATASETS.md)
+Guide to supported prompt datasets and how to use them.
+
+**Topics covered:**
+- Databricks Dolly 15k
+- ShareGPT conversational dataset
+- Custom dataset loading
+- Dataset selection for different use cases
+- Caching and performance
+
+**Read this if you want to:**
+- Choose the right dataset for your test
+- Load ShareGPT or custom datasets
+- Mix multiple datasets
+- Understand dataset characteristics
+
 #### [Architecture Guide](ARCHITECTURE.md)
 Detailed explanation of the system design, components, and communication patterns.
 

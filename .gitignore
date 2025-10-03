@@ -68,8 +68,10 @@ app.log
 
 # Datasets and large files
 databricks-dolly-15k.jsonl
-*.jsonl
-*.csv
+sharegpt.jsonl
+cnn_dailymail*.jsonl
+billsum.jsonl
+infinity_instruct.jsonl
 *.parquet
 *.arrow
 
