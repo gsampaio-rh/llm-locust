@@ -64,7 +64,7 @@ def load_databricks_dolly(
             # Cache the dataset
             cache_file.parent.mkdir(parents=True, exist_ok=True)
             with open(cache_file, "wb") as f:
-            f.write(content)
+                f.write(content)
 
             dataset = [json.loads(line) for line in content.decode().split("\n") if line.strip()]
             logger.info(f"Dataset downloaded and cached to {cache_file}")
