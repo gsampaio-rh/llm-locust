@@ -143,6 +143,13 @@ All components support configuration via:
 - Environment variables (for API keys, hosts, etc.)
 - Config files (coming soon)
 
+## 🔧 Recent Updates
+
+**✅ Critical Fix (Oct 2025):** Failed requests now logged to CSV files
+- Success rate calculations now accurate
+- Complete visibility into error patterns
+- See [CHANGELOG.md](docs/CHANGELOG.md) for details
+
 ## 📝 Development
 
 ```bash

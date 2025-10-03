@@ -43,22 +43,6 @@ Detailed explanation of the system design, components, and communication pattern
 - Debug performance issues
 - Contribute to the codebase
 
-#### [Metrics Guide](METRICS_GUIDE.md)
-Comprehensive reference for all metrics collected and how to use them.
-
-**Topics covered:**
-- Metric definitions (TTFT, TPOT, RPS, etc.)
-- Current vs. future metrics
-- Comparison to industry standards
-- Custom metric implementation
-- Export and analysis examples
-
-**Read this if you want to:**
-- Understand what metrics are available
-- Add custom metrics
-- Compare to other LLM benchmarking tools
-- Export metrics to external systems
-
 #### [Metrics Coverage Analysis](METRICS_COVERAGE.md)
 Detailed analysis of which industry-standard KPIs are available.
 

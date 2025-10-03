@@ -70,16 +70,12 @@ class User:
                                     start_time=start_time,
                                     end_time=end_time,
                                     status_code=response.status,
+                                    user_id=self.user_id,
                                 )
                             )
                             error_text = await response.text()
-                            logger.info(
-                                "Request failure",
-                                extra={
-                                    "user_id": self.user_id,
-                                    "status": response.status,
-                                    "error": error_text[:200],
-                                },
+                            logger.error(
+                                f"Request failed with status {response.status}: {error_text[:500]}"
                             )
                             continue
 

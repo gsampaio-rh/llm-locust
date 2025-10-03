@@ -133,8 +133,8 @@ class MetricsCollector:
                 if isinstance(metrics_data, RequestSuccessLog | RequestFailureLog):
                     self.metrics_list.collect_request(metrics_data, self)
                     
-                    # Log per-request metrics if logger is enabled
-                    if self.per_request_logger and isinstance(metrics_data, RequestSuccessLog):
+                    # Log per-request metrics if logger is enabled (both success and failure)
+                    if self.per_request_logger:
                         self.per_request_logger.log_request(metrics_data, self.model_client)
 
                 elif isinstance(metrics_data, ErrorLog):

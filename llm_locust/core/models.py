@@ -51,6 +51,7 @@ class RequestFailureLog:
     start_time: float
     end_time: float
     status_code: int
+    user_id: int = 0  # Which user made this request
 
 
 @dataclasses.dataclass(frozen=True)

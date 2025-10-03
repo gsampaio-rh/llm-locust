@@ -11,7 +11,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from llm_locust.core.models import RequestSuccessLog
+from llm_locust.core.models import RequestFailureLog, RequestSuccessLog
 
 logger = logging.getLogger(__name__)
 
@@ -100,17 +100,22 @@ class PerRequestLogger:
 
     def log_request(
         self,
-        request_log: RequestSuccessLog,
+        request_log: RequestSuccessLog | RequestFailureLog,
         model_client: Any,
     ) -> None:
         """
-        Log metrics for a single request.
+        Log metrics for a single request (success or failure).
 
         Args:
-            request_log: Request success log
+            request_log: Request success or failure log
             model_client: Client for parsing response
         """
         self.request_count += 1
+        
+        # Handle failures separately
+        if isinstance(request_log, RequestFailureLog):
+            self._log_failure(request_log)
+            return
 
         # Calculate output token count and decode text
         output_tokens = 0
@@ -206,6 +211,49 @@ class PerRequestLogger:
             if self.summary_interval == 0 or self.request_count % self.summary_interval == 0:
                 self._print_metrics(metrics)
 
+    def _log_failure(self, request_log: RequestFailureLog) -> None:
+        """Log a failed request with minimal metrics."""
+        # Calculate duration
+        total_duration_s = request_log.end_time - request_log.start_time
+        
+        # Build metrics dictionary with null values for unavailable data
+        metrics = {
+            "request_id": self.request_count,
+            "timestamp": request_log.timestamp,
+            "user_id": request_log.user_id,
+            "input_tokens": 0,  # Not available for failures
+            "output_tokens": 0,
+            "ttft_ms": 0.0,
+            "tpot_ms": 0.0,
+            "end_to_end_s": round(total_duration_s, 3),
+            "total_tokens_per_sec": 0.0,
+            "output_tokens_per_sec": 0.0,
+            "status_code": request_log.status_code,
+        }
+        
+        if self.include_text:
+            metrics["input_prompt"] = "[FAILED]"
+            metrics["output_text"] = f"[ERROR {request_log.status_code}]"
+        
+        # Track per-user stats
+        user_id = request_log.user_id
+        self.user_requests[user_id] += 1
+        user_request_num = self.user_requests[user_id]
+        
+        # Add user request number to metrics
+        metrics["user_request_num"] = user_request_num
+        
+        # Write to file
+        if self.format == "csv":
+            self._write_csv_row(metrics)
+        else:
+            self._write_jsonl_row(metrics)
+        
+        # Print to console if enabled
+        if self.print_to_console:
+            if self.summary_interval == 0 or self.request_count % self.summary_interval == 0:
+                self._print_failure_metrics(metrics)
+
     def _write_csv_row(self, metrics: dict[str, Any]) -> None:
         """Write metrics row to CSV."""
         with open(self.output_file, "a", newline="") as f:
@@ -248,6 +296,15 @@ class PerRequestLogger:
             f"📥 In: {metrics['input_tokens']:4d} | "
             f"📤 Out: {metrics['output_tokens']:4d} | "
             f"🚀 {metrics['output_tokens_per_sec']:6.1f} tok/s"
+        )
+
+    def _print_failure_metrics(self, metrics: dict[str, Any]) -> None:
+        """Print failure metrics to console."""
+        logger.error(
+            f"[FAILURE] ❌ "
+            f"#{metrics['request_id']:4d} | User {metrics['user_id']:2d} / Req {metrics['user_request_num']:4d} | "
+            f"Status: {metrics['status_code']} | "
+            f"⏰ E2E: {metrics['end_to_end_s']:6.3f}s"
         )
 
     def print_summary(self) -> None:
