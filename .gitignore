@@ -74,9 +74,9 @@ databricks-dolly-15k.jsonl
 *.arrow
 
 # Test results
+results/
 test_results/
 per_request_logs/
-*.csv
 
 # OS
 .DS_Store

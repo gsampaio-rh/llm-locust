@@ -31,6 +31,17 @@ pip install -e .
 pip install -e ".[dev]"
 ```
 
+## 📚 Documentation
+
+Comprehensive documentation is available in the [`docs/`](docs/) directory:
+
+- **[Architecture Guide](docs/ARCHITECTURE.md)** - System design and internals
+- **[Metrics Guide](docs/METRICS_GUIDE.md)** - Complete metrics reference
+- **[Metrics Coverage](docs/METRICS_COVERAGE.md)** - KPI analysis and mapping
+- **[Refactoring Summary](docs/REFACTORING_SUMMARY.md)** - Change history
+
+See [`docs/README.md`](docs/README.md) for a complete documentation index.
+
 ## 🏗️ Architecture
 
 ```

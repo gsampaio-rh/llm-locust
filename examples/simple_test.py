@@ -127,8 +127,8 @@ def main() -> None:
     parser.add_argument(
         "--output-file",
         type=str,
-        default="per_request_metrics.csv",
-        help="Output file for per-request metrics (default: per_request_metrics.csv)",
+        default="results/per_request_metrics.csv",
+        help="Output file for per-request metrics (default: results/per_request_metrics.csv)",
     )
     parser.add_argument(
         "--output-format",
