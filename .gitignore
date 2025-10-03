@@ -1,3 +1,98 @@
-__pycache__
-*.pyc
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.cursor/
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+.pyre/
+
+# Jupyter
+.ipynb_checkpoints
+*.ipynb
+
+# Logs
+*.log
+logs/
+app.log
+
+# Datasets and large files
 databricks-dolly-15k.jsonl
+*.jsonl
+*.csv
+*.parquet
+*.arrow
+
+# Test results
+test_results/
+per_request_logs/
+*.csv
+
+# OS
+.DS_Store
+Thumbs.db
+*.bak
+*.tmp
+
+# Distribution
+*.tar.gz
+*.zip
+*.whl
+
+# Editor backups
+*~
+\#*\#
+.#*
+
+# Ruff cache
+.ruff_cache/
