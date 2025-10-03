@@ -68,6 +68,7 @@ class MetricsCollector:
         tokens_per_sec = log_dict.get("total_output_tokens_per_second", 0)
         
         logger.info(
+            f"[AGGREGATE] "
             f"👥 Users: {active_users:2d} | "
             f"📊 RPS: {rps:6.2f} | "
             f"❌ Failed: {failed_rps:5.2f} | "

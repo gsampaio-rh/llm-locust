@@ -116,7 +116,13 @@ def main() -> None:
     parser.add_argument(
         "--log-to-console",
         action="store_true",
-        help="Print per-request metrics to console",
+        help="Print per-request metrics to console (WARNING: noisy with high concurrency)",
+    )
+    parser.add_argument(
+        "--summary-interval",
+        type=int,
+        default=10,
+        help="Show summary every N requests instead of each request (default: 10)",
     )
     parser.add_argument(
         "--output-file",
@@ -136,15 +142,36 @@ def main() -> None:
 
     logger.info("")
     logger.info("=" * 80)
-    logger.info("🚀 LLM LOAD TEST STARTING")
+    logger.info("🚀 LLM LOAD TEST CONFIGURATION")
     logger.info("=" * 80)
-    logger.info(f"  🎯 Target:      {args.host}")
+    logger.info("")
+    logger.info("Target Configuration:")
+    logger.info(f"  🎯 Endpoint:    {args.host}")
     logger.info(f"  🤖 Model:       {args.model}")
-    logger.info(f"  👥 Users:       {args.users}")
-    logger.info(f"  ⚡ Spawn Rate:  {args.spawn_rate}/s")
-    logger.info(f"  ⏱️  Duration:    {args.duration}s")
+    logger.info(f"  🔧 Tokenizer:   {args.tokenizer}")
+    logger.info("")
+    logger.info("Load Configuration:")
+    logger.info(f"  👥 Users:       {args.users} concurrent users")
+    logger.info(f"  ⚡ Spawn Rate:  {args.spawn_rate} users/second")
+    logger.info(f"  ⏱️  Duration:    {args.duration} seconds")
+    logger.info(f"  📊 Total Reqs:  ~{int(args.users * args.duration * 0.5)} (estimated)")
+    logger.info("")
+    logger.info("Request Configuration:")
     logger.info(f"  🔤 Max Tokens:  {args.max_tokens}")
-    logger.info(f"  📝 Prompt Range: {args.prompt_min_tokens}-{args.prompt_max_tokens} tokens")
+    logger.info(f"  📝 Input Range: {args.prompt_min_tokens}-{args.prompt_max_tokens} tokens")
+    logger.info("")
+    if args.log_per_request:
+        logger.info("Per-Request Logging:")
+        logger.info(f"  📁 Output File: {args.output_file}")
+        logger.info(f"  📄 Format:      {args.output_format.upper()}")
+        logger.info(f"  🖥️  Console:     {'Yes' if args.log_to_console else 'No'}")
+        if args.log_to_console:
+            logger.info(f"  📊 Display:     Every {args.summary_interval}th request")
+        logger.info("")
+    logger.info("Metrics Display:")
+    logger.info("  [AGGREGATE] = Sliding window metrics (all users, last 30s)")
+    logger.info("  [REQUEST]   = Individual request metrics")
+    logger.info("")
     logger.info("=" * 80)
     logger.info("")
 
@@ -181,10 +208,16 @@ def main() -> None:
     per_request_logger = None
     if args.log_per_request:
         logger.info(f"📝 Enabling per-request logging to {args.output_file}")
+        if args.log_to_console:
+            if args.summary_interval > 0:
+                logger.info(f"   Console: Showing every {args.summary_interval}th request")
+            else:
+                logger.info("   Console: Showing all requests (may be noisy!)")
         per_request_logger = PerRequestLogger(
             output_file=args.output_file,
             format=args.output_format,
             print_to_console=args.log_to_console,
+            summary_interval=args.summary_interval,
         )
 
     # Start metrics collector
@@ -233,7 +266,11 @@ def main() -> None:
     signal.signal(signal.SIGTERM, signal_handler)
 
     # Run for specified duration with progress updates
-    logger.info(f"Running test for {args.duration} seconds...")
+    logger.info("")
+    logger.info("=" * 80)
+    logger.info("🏁 TEST STARTING")
+    logger.info("=" * 80)
+    logger.info(f"Running for {args.duration} seconds...")
     logger.info("Press Ctrl+C to stop early")
     logger.info("")
     logger.info("=" * 80)
@@ -256,8 +293,13 @@ def main() -> None:
 
     logger.info("")
     logger.info("=" * 80)
-    logger.info("✅ Test complete, shutting down...")
+    logger.info("⏹️  Test Duration Complete")
     logger.info("=" * 80)
+    
+    # Print per-request summary if enabled
+    if per_request_logger:
+        per_request_logger.print_summary()
+    
     signal_handler(signal.SIGINT, None)
 
 

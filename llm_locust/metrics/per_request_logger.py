@@ -7,6 +7,7 @@ Logs individual request metrics including TTFT, TPOT, and end-to-end latency.
 import csv
 import json
 import logging
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -32,6 +33,7 @@ class PerRequestLogger:
         output_file: Path | str,
         format: str = "csv",
         print_to_console: bool = False,
+        summary_interval: int = 10,
     ) -> None:
         """
         Initialize per-request logger.
@@ -40,11 +42,17 @@ class PerRequestLogger:
             output_file: Path to output file
             format: Output format ('csv' or 'jsonl')
             print_to_console: Also print to console
+            summary_interval: Print summary every N requests (0 = print all)
         """
         self.output_file = Path(output_file)
         self.format = format.lower()
         self.print_to_console = print_to_console
+        self.summary_interval = summary_interval
         self.request_count = 0
+        
+        # Per-user tracking
+        self.user_requests: dict[int, int] = defaultdict(int)
+        self.user_metrics: dict[int, list[float]] = defaultdict(list)
 
         # Create output directory if needed
         self.output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -62,6 +70,8 @@ class PerRequestLogger:
             writer.writerow([
                 "request_id",
                 "timestamp",
+                "user_id",
+                "user_request_num",
                 "input_tokens",
                 "output_tokens",
                 "ttft_ms",
@@ -117,6 +127,7 @@ class PerRequestLogger:
         metrics = {
             "request_id": self.request_count,
             "timestamp": request_log.timestamp,
+            "user_id": request_log.user_id,
             "input_tokens": request_log.num_input_tokens,
             "output_tokens": output_tokens,
             "ttft_ms": round(ttft_ms, 2),
@@ -127,6 +138,15 @@ class PerRequestLogger:
             "status_code": request_log.status_code,
         }
 
+        # Track per-user stats
+        user_id = request_log.user_id
+        self.user_requests[user_id] += 1
+        user_request_num = self.user_requests[user_id]
+        self.user_metrics[user_id].append(ttft_ms)
+        
+        # Add user request number to metrics
+        metrics["user_request_num"] = user_request_num
+
         # Write to file
         if self.format == "csv":
             self._write_csv_row(metrics)
@@ -135,7 +155,9 @@ class PerRequestLogger:
 
         # Print to console if enabled
         if self.print_to_console:
-            self._print_metrics(metrics)
+            # Print every request or use summary mode
+            if self.summary_interval == 0 or self.request_count % self.summary_interval == 0:
+                self._print_metrics(metrics)
 
     def _write_csv_row(self, metrics: dict[str, Any]) -> None:
         """Write metrics row to CSV."""
@@ -144,6 +166,8 @@ class PerRequestLogger:
             writer.writerow([
                 metrics["request_id"],
                 metrics["timestamp"],
+                metrics["user_id"],
+                metrics["user_request_num"],
                 metrics["input_tokens"],
                 metrics["output_tokens"],
                 metrics["ttft_ms"],
@@ -163,7 +187,8 @@ class PerRequestLogger:
     def _print_metrics(self, metrics: dict[str, Any]) -> None:
         """Print metrics to console."""
         logger.info(
-            f"📋 Request #{metrics['request_id']:4d} | "
+            f"[REQUEST]   "
+            f"#{metrics['request_id']:4d} | User {metrics['user_id']:2d} / Req {metrics['user_request_num']:4d} | "
             f"⏱️  TTFT: {metrics['ttft_ms']:7.1f}ms | "
             f"🔄 TPOT: {metrics['tpot_ms']:6.1f}ms | "
             f"⏰ E2E: {metrics['end_to_end_s']:6.3f}s | "
@@ -172,9 +197,36 @@ class PerRequestLogger:
             f"🚀 {metrics['output_tokens_per_sec']:6.1f} tok/s"
         )
 
+    def print_summary(self) -> None:
+        """Print test summary statistics."""
+        if self.request_count == 0:
+            logger.info("No requests logged yet")
+            return
+
+        logger.info("")
+        logger.info("=" * 80)
+        logger.info("📊 TEST SUMMARY")
+        logger.info("=" * 80)
+        logger.info(f"Total Requests: {self.request_count}")
+        logger.info("")
+        logger.info("Per-User Request Distribution:")
+        logger.info("-" * 80)
+        
+        for user_id in sorted(self.user_requests.keys()):
+            count = self.user_requests[user_id]
+            ttft_values = self.user_metrics[user_id]
+            avg_ttft = sum(ttft_values) / len(ttft_values) if ttft_values else 0
+            logger.info(
+                f"  User {user_id:2d}: {count:4d} requests | "
+                f"Avg TTFT: {avg_ttft:6.1f}ms"
+            )
+        
+        logger.info("-" * 80)
+        logger.info(f"📁 Full results saved to: {self.output_file}")
+        logger.info("=" * 80)
+
     def close(self) -> None:
         """Close logger and print summary."""
-        logger.info(
-            f"✅ Logged {self.request_count} requests to {self.output_file}"
-        )
+        self.print_summary()
+        logger.info(f"✅ Per-request logging complete")
 

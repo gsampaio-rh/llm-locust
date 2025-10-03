@@ -116,6 +116,7 @@ class User:
                                 start_time=start_time,
                                 end_time=end_time,
                                 status_code=response.status,
+                                user_id=self.user_id,
                             )
                         )
                 except Exception as e:
