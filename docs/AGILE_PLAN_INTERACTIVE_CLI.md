@@ -420,7 +420,6 @@ llm-locust race --config configs/races/cluster-race.yaml
 - [x] Health badges: ✅ Healthy, ⚠️ Warning, ❌ Error, ⏳ Initializing
 - [x] Error counter per engine (shown inline)
 - [x] Health calculation based on success rate, TTFT, recent errors
-- [ ] Tooltip on hover (not supported in terminal)
 - [ ] Red flash on new error (deferred to Sprint 3)
 - [x] Status icons displayed with each engine
 

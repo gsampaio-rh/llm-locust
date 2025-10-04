@@ -104,113 +104,108 @@ class RaceTUI:
             border_style="cyan",
         )
 
-    def render_engines(self) -> Panel:
-        """Render the engines section with status, progress, and sparklines."""
-
+    def render_engines(self) -> Layout:
+        """Render engines as individual panels in a column layout."""
         from llm_locust.race.health import get_health_badge
         from llm_locust.race.sparkline import get_trend_indicator, render_sparkline_with_color
 
-        # Create a table + sparklines view
-        content = Text()
+        # Create layout for engine panels
+        engines_layout = Layout()
 
-        for i, engine in enumerate(self.config.engines):
-            if i > 0:
-                content.append("\n" + "─" * 70 + "\n", style="dim")
+        # Create individual panels for each engine
+        engine_layouts = []
 
-            # Get current state
+        for engine in self.config.engines:
             engine_state = self.state.get_engine_state(engine.name) if self.state else None
-
-            # Engine header with health badge
-            if engine_state:
-                health_badge = get_health_badge(engine_state.health_status)
-                content.append(f"{health_badge} ", style="bold")
-
-            content.append(f"{engine.emoji} ", style="bold")
-            content.append(f"{engine.name}", style=f"bold {engine.color}")
+            content = Text()
 
             if engine_state and engine_state.request_count > 0:
-                # Show status with animated counters and health info
+                # Header line with stats
+                health_badge = get_health_badge(engine_state.health_status)
                 animated_reqs = engine_state.get_animated_requests()
 
+                content.append(f"{health_badge} ", style="bold")
                 content.append(
-                    f" - {animated_reqs} reqs, "
-                    f"{engine_state.success_rate:.1f}% success, "
-                    f"{engine_state.requests_per_second:.1f} req/s",
-                    style="dim",
+                    f"Requests: {animated_reqs}  |  "
+                    f"Success: {engine_state.success_rate:.1f}%  |  "
+                    f"Rate: {engine_state.requests_per_second:.1f} req/s",
+                    style="bold white",
                 )
 
-                # Show errors/warnings if any
                 if engine_state.failure_count > 0:
-                    content.append(
-                        f" | ❌ {engine_state.failure_count} fails",
-                        style="red dim",
-                    )
+                    content.append(f"  |  ❌ {engine_state.failure_count} fails", style="red bold")
 
-                content.append("\n")
+                content.append("\n\n")
 
-                # TTFT sparkline
+                # TTFT with larger sparkline
                 if len(engine_state.ttft_history) >= 3:
                     sparkline, color = render_sparkline_with_color(
                         engine_state.ttft_history,
-                        width=20,
+                        width=35,
                         threshold_good=300,
                         threshold_bad=1000,
                     )
                     trend = get_trend_indicator(engine_state.ttft_history)
-                    content.append(f"  TTFT: {engine_state.avg_ttft:6.1f}ms  ", style="dim")
+                    content.append("TTFT  ", style="dim")
+                    content.append(f"{engine_state.avg_ttft:7.1f}ms  ", style="bold yellow")
                     content.append(sparkline, style=color)
-                    content.append(f" {trend}\n", style="dim")
+                    content.append(f"  {trend}\n", style="bold white")
 
-                # TPOT sparkline
+                # TPOT with larger sparkline
                 if len(engine_state.tpot_history) >= 3:
                     sparkline, color = render_sparkline_with_color(
                         engine_state.tpot_history,
-                        width=20,
+                        width=35,
                         threshold_good=20,
                         threshold_bad=100,
                     )
                     trend = get_trend_indicator(engine_state.tpot_history)
-                    content.append(f"  TPOT: {engine_state.avg_tpot:6.1f}ms  ", style="dim")
+                    content.append("TPOT  ", style="dim")
+                    content.append(f"{engine_state.avg_tpot:7.1f}ms  ", style="bold yellow")
                     content.append(sparkline, style=color)
-                    content.append(f" {trend}\n", style="dim")
+                    content.append(f"  {trend}\n", style="bold white")
 
-                # Throughput sparkline
+                # Throughput with larger sparkline
                 if len(engine_state.throughput_history) >= 3:
                     sparkline, _ = render_sparkline_with_color(
                         engine_state.throughput_history,
-                        width=20,
+                        width=35,
                     )
                     trend = get_trend_indicator(engine_state.throughput_history)
-                    content.append(f"  Rate: {engine_state.avg_throughput:6.1f}t/s ", style="dim")
+                    content.append("Rate  ", style="dim")
+                    content.append(f"{engine_state.avg_throughput:7.1f}t/s ", style="bold cyan")
                     content.append(sparkline, style="cyan")
-                    content.append(f" {trend}\n", style="dim")
+                    content.append(f"  {trend}", style="bold white")
+
             else:
-                # Loading state
+                # Loading state with better messaging
                 elapsed = self.state.elapsed_time if self.state else 0
                 if elapsed < 90:
-                    content.append(" - ", style="dim")
-                    content.append("[yellow]Loading datasets...[/yellow]\n")
+                    content.append("📦 Loading datasets...\n\n", style="bold yellow")
+                    content.append(
+                        f"Please wait (~{max(0, 90-int(elapsed))}s remaining)",
+                        style="dim"
+                    )
                 else:
-                    content.append(" - ", style="dim")
-                    content.append("[red]Waiting (check logs)...[/red]\n")
+                    content.append("⚠️ Waiting for engine...\n\n", style="bold red")
+                    content.append("Check logs for details", style="dim")
 
-        return Panel(
-            content,
-            title=f"Engines ({len(self.config.engines)}) - Live Metrics & Sparklines",
-            border_style="blue",
-        )
+            # Create panel for this engine
+            panel = Panel(
+                content,
+                title=f"{engine.emoji} {engine.name}",
+                title_align="left",
+                border_style=engine.color,
+                padding=(1, 2),
+                expand=True,
+            )
+            engine_layouts.append(Layout(panel, name=f"engine_{engine.name}"))
 
-    def render_footer(self) -> Panel:
-        """Render the footer with controls."""
-        footer_text = Text()
-        footer_text.append("Press ", style="dim")
-        footer_text.append("Ctrl+C", style="bold red")
-        footer_text.append(" to stop race", style="dim")
+        # Stack engines vertically
+        if engine_layouts:
+            engines_layout.split_column(*engine_layouts)
 
-        return Panel(
-            footer_text,
-            border_style="dim",
-        )
+        return engines_layout
 
     def render_leaderboard(self) -> Panel:
         """Render the leaderboard with rankings."""
@@ -265,11 +260,31 @@ class RaceTUI:
             border_style="yellow",
         )
 
+    def render_footer(self) -> Panel:
+        """Render the footer with controls."""
+        footer_text = Text()
+        footer_text.append("Press ", style="dim")
+        footer_text.append("Ctrl+C", style="bold red")
+        footer_text.append(" to stop race", style="dim")
+
+        return Panel(
+            footer_text,
+            border_style="dim",
+        )
+
     def render(self) -> Layout:
         """Render the complete TUI."""
         self.layout["header"].update(self.render_header())
-        self.layout["engines"].update(self.render_engines())
-        self.layout["leaderboard"].update(self.render_leaderboard())
+
+        # Update engines layout
+        engines_layout = self.render_engines()
+        # Replace the engines section with new layout
+        body = self.layout["body"]
+        body.split_row(
+            engines_layout,
+            Layout(self.render_leaderboard(), name="leaderboard", ratio=1),
+        )
+
         self.layout["footer"].update(self.render_footer())
         return self.layout
 
@@ -343,4 +358,3 @@ def show_race_header(config: "RaceConfig", console: Console | None = None) -> No
     console.print()
     console.print("=" * 80, style="cyan")
     console.print()
-
