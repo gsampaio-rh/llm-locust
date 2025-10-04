@@ -26,3 +26,6 @@ pyyaml>=6.0.0
 # Terminal UI (for interactive racing)
 rich>=13.7.0
 
+# Terminal charts (for time-series visualization)
+plotext>=5.2.8
+

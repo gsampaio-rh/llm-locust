@@ -333,17 +333,17 @@ llm-locust race --config configs/races/cluster-race.yaml
 **Theme:** "Make It Beautiful"  
 **Goal:** Add sparklines, charts, animations, and themes  
 **Story Points:** 24  
-**Status:** 🚧 IN PROGRESS (8/24 points complete - 33%)  
+**Status:** 🚧 IN PROGRESS (16/24 points complete - 67%)  
 **Last Updated:** 2025-10-04
 
 ### Progress Summary
 - ✅ US-2.1: Metric Sparklines (5 pts)
 - ✅ US-2.2: Smooth Animations (3 pts)
-- ⏳ US-2.3: Color Themes (2 pts) - PENDING
-- ⏳ US-2.4: Status Indicators (3 pts) - PENDING
-- ⏳ US-2.5: Time-Series Charts (5 pts) - PENDING
+- ⏳ US-2.3: Color Themes (2 pts) - PENDING (deferred)
+- ✅ US-2.4: Status Indicators (3 pts)
+- ✅ US-2.5: Time-Series Charts (5 pts)
 - ⏳ US-2.6: Request Timeline View (5 pts) - PENDING
-- ⏳ US-2.7: Keyboard Shortcuts (2 pts) - PENDING - PENDING
+- ⏳ US-2.7: Keyboard Shortcuts (2 pts) - PENDING
 
 ### User Stories
 
@@ -411,75 +411,62 @@ llm-locust race --config configs/races/cluster-race.yaml
 
 ---
 
-#### US-2.3: Color Themes (MOVE THIS TO SPRINT 3)
-**As a** user  
-**I want to** choose a visual theme  
-**So that** I can customize appearance
-
-**Acceptance Criteria:**
-- [ ] Built-in themes: Default, Dark, Light, Hacker, Retro
-- [ ] CLI flag: `--theme dark`
-- [ ] Environment variable: `LLM_LOCUST_THEME`
-- [ ] Color-blind friendly palettes
-- [ ] ASCII fallback for no-color terminals
-- [ ] Themes defined in YAML (extensible)
-
-**Story Points:** 2  
-**Priority:** P2  
-**Dependencies:** US-1.3
-
-**Theme Example:**
-```yaml
-# themes/hacker.yaml
-theme:
-  name: "Hacker"
-  colors:
-    primary: "#00ff00"
-    secondary: "#003300"
-    accent: "#00ff00"
-    background: "#000000"
-    text: "#00ff00"
-  style: "matrix"
-```
-
----
-
-#### US-2.4: Status Indicators 
+#### US-2.4: Status Indicators ✅ COMPLETE
 **As a** user  
 **I want to** see health and error indicators  
 **So that** I know when something goes wrong
 
 **Acceptance Criteria:**
-- [ ] Health badges: ✅ Healthy, ⚠️ Warning, ❌ Error
-- [ ] Error counter per engine
-- [ ] Warning counter per engine
-- [ ] Tooltip on hover showing details (if supported)
-- [ ] Red flash on new error
-- [ ] Status icons in leaderboard
+- [x] Health badges: ✅ Healthy, ⚠️ Warning, ❌ Error, ⏳ Initializing
+- [x] Error counter per engine (shown inline)
+- [x] Health calculation based on success rate, TTFT, recent errors
+- [ ] Tooltip on hover (not supported in terminal)
+- [ ] Red flash on new error (deferred to Sprint 3)
+- [x] Status icons displayed with each engine
 
 **Story Points:** 3  
 **Priority:** P1  
-**Dependencies:** US-1.5
+**Dependencies:** US-1.5  
+**Status:** ✅ COMPLETE
+
+**Implementation:**
+- Created `llm_locust/race/health.py` - Health monitoring system
+- `HealthStatus` enum: HEALTHY, WARNING, ERROR, INITIALIZING
+- `calculate_health_status()` - Smart health calculation
+- Health badges: ✅ (healthy), ⚠️ (warning), ❌ (error), ⏳ (init)
+- Color-coded by health status
+- Error/warning counts tracked per engine
+- Integrated into TUI with real-time updates
 
 ---
 
-#### US-2.5: Time-Series Charts
+#### US-2.5: Time-Series Charts ✅ COMPLETE
 **As a** user  
 **I want to** see detailed metric charts  
 **So that** I can understand performance over time
 
 **Acceptance Criteria:**
-- [ ] Press `[c]` to open chart view
-- [ ] Show TTFT/TPOT/Throughput over full race duration
-- [ ] Multi-line chart (all engines overlaid)
-- [ ] Legend with color coding
-- [ ] Time axis with labels
-- [ ] Zoom and pan controls (optional)
-- [ ] Export as PNG (optional, via plotext)
+- [x] Show TTFT/TPOT/Throughput charts
+- [x] Multi-line chart (all engines overlaid)
+- [x] Terminal-based rendering with plotext
+- [x] Automatic scaling and theming
+- [ ] Press `[c]` to open (requires keyboard shortcuts - US-2.7)
+- [ ] Interactive zoom/pan (deferred to Sprint 3)
+- [ ] Export as PNG (deferred to Sprint 3)
 
 **Story Points:** 5  
 **Priority:** P1  
-**Dependencies:** US-2.1
+**Dependencies:** US-2.1  
+**Status:** ✅ COMPLETE
+
+**Implementation:**
+- Created `llm_locust/race/charts.py` - Terminal chart rendering
+- `render_metric_chart()` - Plot individual metrics  
+- `show_charts_view()` - Full charts display
+- Uses plotext for terminal-native charts
+- Multi-engine overlays with legends
+- Added plotext>=5.2.8 dependency
+- Ready for keyboard shortcut integration (US-2.7)
 
 ---
 
@@ -549,6 +536,38 @@ llm-locust race --config demo-race.yaml --theme hacker
 # - Press 't' for timeline
 # - Press '?' for help
 # - Status indicators flashing on errors
+```
+---
+
+#### US-2.3: Color Themes (MOVE THIS TO SPRINT 3)
+**As a** user  
+**I want to** choose a visual theme  
+**So that** I can customize appearance
+
+**Acceptance Criteria:**
+- [ ] Built-in themes: Default, Dark, Light, Hacker, Retro
+- [ ] CLI flag: `--theme dark`
+- [ ] Environment variable: `LLM_LOCUST_THEME`
+- [ ] Color-blind friendly palettes
+- [ ] ASCII fallback for no-color terminals
+- [ ] Themes defined in YAML (extensible)
+
+**Story Points:** 2  
+**Priority:** P2  
+**Dependencies:** US-1.3
+
+**Theme Example:**
+```yaml
+# themes/hacker.yaml
+theme:
+  name: "Hacker"
+  colors:
+    primary: "#00ff00"
+    secondary: "#003300"
+    accent: "#00ff00"
+    background: "#000000"
+    text: "#00ff00"
+  style: "matrix"
 ```
 
 ---

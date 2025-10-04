@@ -107,6 +107,7 @@ class RaceTUI:
     def render_engines(self) -> Panel:
         """Render the engines section with status, progress, and sparklines."""
 
+        from llm_locust.race.health import get_health_badge
         from llm_locust.race.sparkline import get_trend_indicator, render_sparkline_with_color
 
         # Create a table + sparklines view
@@ -119,19 +120,32 @@ class RaceTUI:
             # Get current state
             engine_state = self.state.get_engine_state(engine.name) if self.state else None
 
-            # Engine header
+            # Engine header with health badge
+            if engine_state:
+                health_badge = get_health_badge(engine_state.health_status)
+                content.append(f"{health_badge} ", style="bold")
+
             content.append(f"{engine.emoji} ", style="bold")
             content.append(f"{engine.name}", style=f"bold {engine.color}")
 
             if engine_state and engine_state.request_count > 0:
-                # Show status with animated counters
+                # Show status with animated counters and health info
                 animated_reqs = engine_state.get_animated_requests()
+
                 content.append(
                     f" - {animated_reqs} reqs, "
                     f"{engine_state.success_rate:.1f}% success, "
                     f"{engine_state.requests_per_second:.1f} req/s",
                     style="dim",
                 )
+
+                # Show errors/warnings if any
+                if engine_state.failure_count > 0:
+                    content.append(
+                        f" | ❌ {engine_state.failure_count} fails",
+                        style="red dim",
+                    )
+
                 content.append("\n")
 
                 # TTFT sparkline

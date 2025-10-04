@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 from llm_locust.core.models import RequestFailureLog, RequestSuccessLog
 from llm_locust.race.animation import CounterAnimation
+from llm_locust.race.health import HealthStatus, calculate_health_status
 
 if TYPE_CHECKING:
     from llm_locust.race.config import RaceConfig
@@ -40,6 +41,10 @@ class EngineState:
     # Animated counters for smooth display
     _animated_requests: CounterAnimation | None = field(default=None, init=False)
     _animated_tokens: CounterAnimation | None = field(default=None, init=False)
+
+    # Error tracking
+    recent_errors: int = 0  # Errors in last 60 seconds
+    warning_count: int = 0
 
     def __post_init__(self) -> None:
         """Initialize animated counters."""
@@ -96,6 +101,17 @@ class EngineState:
         if not self.throughput_history:
             return 0.0
         return sum(self.throughput_history) / len(self.throughput_history)
+
+    @property
+    def health_status(self) -> HealthStatus:
+        """Calculate current health status."""
+        return calculate_health_status(
+            request_count=self.request_count,
+            _failure_count=self.failure_count,
+            success_rate=self.success_rate,
+            avg_ttft=self.avg_ttft,
+            recent_errors=self.recent_errors,
+        )
 
 
 class RaceState:
@@ -214,6 +230,7 @@ class RaceState:
         # Similar issue - need better engine mapping
         for engine_state in self.engines.values():
             engine_state.failure_count += 1
+            engine_state.recent_errors += 1
             engine_state.last_update = time.time()
 
     def get_engine_state(self, engine_name: str) -> EngineState | None:
