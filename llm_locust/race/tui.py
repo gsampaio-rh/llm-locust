@@ -105,51 +105,84 @@ class RaceTUI:
         )
 
     def render_engines(self) -> Panel:
-        """Render the engines section with status and progress for each engine."""
-        from rich.table import Table
+        """Render the engines section with status, progress, and sparklines."""
 
-        # Create a simple table for better visibility
-        table = Table(show_header=True, header_style="bold magenta", box=None)
-        table.add_column("Engine", style="cyan", width=20)
-        table.add_column("Requests", justify="right", style="green")
-        table.add_column("Failures", justify="right", style="red")
-        table.add_column("Success Rate", justify="right")
-        table.add_column("Status", style="yellow")
+        from llm_locust.race.sparkline import get_trend_indicator, render_sparkline_with_color
 
-        for engine in self.config.engines:
-            # Get current state if available
+        # Create a table + sparklines view
+        content = Text()
+
+        for i, engine in enumerate(self.config.engines):
+            if i > 0:
+                content.append("\n" + "─" * 70 + "\n", style="dim")
+
+            # Get current state
             engine_state = self.state.get_engine_state(engine.name) if self.state else None
 
+            # Engine header
+            content.append(f"{engine.emoji} ", style="bold")
+            content.append(f"{engine.name}", style=f"bold {engine.color}")
+
             if engine_state and engine_state.request_count > 0:
-                # Show real data
-                table.add_row(
-                    f"{engine.emoji} {engine.name}",
-                    str(engine_state.request_count),
-                    str(engine_state.failure_count),
-                    f"{engine_state.success_rate:.1f}%",
-                    f"[green]Racing! ({engine_state.requests_per_second:.1f} req/s)[/green]",
+                # Show status with animated counters
+                animated_reqs = engine_state.get_animated_requests()
+                content.append(
+                    f" - {animated_reqs} reqs, "
+                    f"{engine_state.success_rate:.1f}% success, "
+                    f"{engine_state.requests_per_second:.1f} req/s",
+                    style="dim",
                 )
+                content.append("\n")
+
+                # TTFT sparkline
+                if len(engine_state.ttft_history) >= 3:
+                    sparkline, color = render_sparkline_with_color(
+                        engine_state.ttft_history,
+                        width=20,
+                        threshold_good=300,
+                        threshold_bad=1000,
+                    )
+                    trend = get_trend_indicator(engine_state.ttft_history)
+                    content.append(f"  TTFT: {engine_state.avg_ttft:6.1f}ms  ", style="dim")
+                    content.append(sparkline, style=color)
+                    content.append(f" {trend}\n", style="dim")
+
+                # TPOT sparkline
+                if len(engine_state.tpot_history) >= 3:
+                    sparkline, color = render_sparkline_with_color(
+                        engine_state.tpot_history,
+                        width=20,
+                        threshold_good=20,
+                        threshold_bad=100,
+                    )
+                    trend = get_trend_indicator(engine_state.tpot_history)
+                    content.append(f"  TPOT: {engine_state.avg_tpot:6.1f}ms  ", style="dim")
+                    content.append(sparkline, style=color)
+                    content.append(f" {trend}\n", style="dim")
+
+                # Throughput sparkline
+                if len(engine_state.throughput_history) >= 3:
+                    sparkline, _ = render_sparkline_with_color(
+                        engine_state.throughput_history,
+                        width=20,
+                    )
+                    trend = get_trend_indicator(engine_state.throughput_history)
+                    content.append(f"  Rate: {engine_state.avg_throughput:6.1f}t/s ", style="dim")
+                    content.append(sparkline, style="cyan")
+                    content.append(f" {trend}\n", style="dim")
             else:
-                # Show loading/waiting state based on elapsed time
+                # Loading state
                 elapsed = self.state.elapsed_time if self.state else 0
                 if elapsed < 90:
-                    # Still in typical loading window
-                    status = "[yellow]Loading datasets...[/yellow]"
+                    content.append(" - ", style="dim")
+                    content.append("[yellow]Loading datasets...[/yellow]\n")
                 else:
-                    # Been waiting a long time, might be stuck
-                    status = "[red]Waiting (check logs)...[/red]"
-
-                table.add_row(
-                    f"{engine.emoji} {engine.name}",
-                    "0",
-                    "0",
-                    "—",
-                    status,
-                )
+                    content.append(" - ", style="dim")
+                    content.append("[red]Waiting (check logs)...[/red]\n")
 
         return Panel(
-            table,
-            title=f"Engines ({len(self.config.engines)})",
+            content,
+            title=f"Engines ({len(self.config.engines)}) - Live Metrics & Sparklines",
             border_style="blue",
         )
 

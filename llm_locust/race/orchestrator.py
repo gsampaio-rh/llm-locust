@@ -126,7 +126,7 @@ class RaceOrchestrator:
             with Live(
                 self.tui.render(),
                 console=self.console,
-                refresh_per_second=4,  # 4 FPS is enough and more reliable
+                refresh_per_second=20,  # 20 FPS for smooth animations
                 screen=False,
                 transient=False,  # Don't clear on exit
             ) as live:
@@ -137,7 +137,7 @@ class RaceOrchestrator:
                     # Force TUI update
                     live.update(self.tui.render(), refresh=True)
 
-                    time.sleep(0.25)  # Update every 250ms (4 FPS)
+                    time.sleep(0.05)  # Update every 50ms (20 FPS for smooth animations)
 
         except KeyboardInterrupt:
             self.console.print("\n[yellow]⚠️  Race interrupted by user[/yellow]")

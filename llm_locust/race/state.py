@@ -11,6 +11,7 @@ from multiprocessing import Queue
 from typing import TYPE_CHECKING
 
 from llm_locust.core.models import RequestFailureLog, RequestSuccessLog
+from llm_locust.race.animation import CounterAnimation
 
 if TYPE_CHECKING:
     from llm_locust.race.config import RaceConfig
@@ -30,6 +31,35 @@ class EngineState:
     total_tokens: int = 0
     last_update: float = field(default_factory=time.time)
 
+    # Metric history for sparklines (last 60 data points)
+    ttft_history: list[float] = field(default_factory=list)
+    tpot_history: list[float] = field(default_factory=list)
+    throughput_history: list[float] = field(default_factory=list)
+    request_rate_history: list[float] = field(default_factory=list)
+
+    # Animated counters for smooth display
+    _animated_requests: CounterAnimation | None = field(default=None, init=False)
+    _animated_tokens: CounterAnimation | None = field(default=None, init=False)
+
+    def __post_init__(self) -> None:
+        """Initialize animated counters."""
+        object.__setattr__(self, "_animated_requests", CounterAnimation(0, speed=20.0))
+        object.__setattr__(self, "_animated_tokens", CounterAnimation(0, speed=50.0))
+
+    def get_animated_requests(self) -> int:
+        """Get smoothly animated request count."""
+        if self._animated_requests:
+            self._animated_requests.set(self.request_count)
+            return self._animated_requests.get()
+        return self.request_count
+
+    def get_animated_tokens(self) -> int:
+        """Get smoothly animated token count."""
+        if self._animated_tokens:
+            self._animated_tokens.set(self.total_tokens)
+            return self._animated_tokens.get()
+        return self.total_tokens
+
     @property
     def success_rate(self) -> float:
         """Calculate success rate as percentage."""
@@ -45,6 +75,27 @@ class EngineState:
         if elapsed < 1:
             return 0.0
         return self.request_count / elapsed
+
+    @property
+    def avg_ttft(self) -> float:
+        """Get average TTFT from recent history."""
+        if not self.ttft_history:
+            return 0.0
+        return sum(self.ttft_history) / len(self.ttft_history)
+
+    @property
+    def avg_tpot(self) -> float:
+        """Get average TPOT from recent history."""
+        if not self.tpot_history:
+            return 0.0
+        return sum(self.tpot_history) / len(self.tpot_history)
+
+    @property
+    def avg_throughput(self) -> float:
+        """Get average throughput from recent history."""
+        if not self.throughput_history:
+            return 0.0
+        return sum(self.throughput_history) / len(self.throughput_history)
 
 
 class RaceState:
@@ -111,12 +162,52 @@ class RaceState:
 
     def _process_success(self, log: RequestSuccessLog) -> None:
         """Process a successful request."""
+        # Calculate metrics from the request
+        num_output_tokens = len(log.result_chunks)
+        duration = log.end_time - log.start_time
+
+        # Calculate TTFT (time to first token)
+        ttft_ms = (log.token_times[0] - log.start_time) * 1000 if log.token_times else 0
+
+        # Calculate TPOT (time per output token)
+        if num_output_tokens > 1 and len(log.token_times) > 1:
+            generation_time = log.token_times[-1] - log.token_times[0]
+            tpot_ms = (generation_time / (num_output_tokens - 1)) * 1000
+        else:
+            tpot_ms = 0
+
+        # Calculate throughput (tokens per second)
+        throughput = (num_output_tokens / duration) if duration > 0 else 0
+
         # We need to map user_id to engine somehow
         # For now, increment all engines equally (will fix with better tracking)
         for engine_state in self.engines.values():
             engine_state.request_count += 1
-            engine_state.total_tokens += log.num_input_tokens + len(log.result_chunks)
+            engine_state.total_tokens += log.num_input_tokens + num_output_tokens
             engine_state.last_update = time.time()
+
+            # Add to metric history (keep last 60 points)
+            max_history = 60
+            if ttft_ms > 0:
+                engine_state.ttft_history.append(ttft_ms)
+                if len(engine_state.ttft_history) > max_history:
+                    engine_state.ttft_history.pop(0)
+
+            if tpot_ms > 0:
+                engine_state.tpot_history.append(tpot_ms)
+                if len(engine_state.tpot_history) > max_history:
+                    engine_state.tpot_history.pop(0)
+
+            if throughput > 0:
+                engine_state.throughput_history.append(throughput)
+                if len(engine_state.throughput_history) > max_history:
+                    engine_state.throughput_history.pop(0)
+
+            # Track request rate
+            current_rate = engine_state.requests_per_second
+            engine_state.request_rate_history.append(current_rate)
+            if len(engine_state.request_rate_history) > max_history:
+                engine_state.request_rate_history.pop(0)
 
     def _process_failure(self, _log: RequestFailureLog) -> None:
         """Process a failed request."""

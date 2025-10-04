@@ -90,7 +90,11 @@ def show_race_summary(
     # Race statistics
     total_reqs = state.total_requests
     total_fails = state.total_failures
-    overall_success = ((total_reqs / (total_reqs + total_fails)) * 100) if (total_reqs + total_fails) > 0 else 0
+    overall_success = (
+        ((total_reqs / (total_reqs + total_fails)) * 100)
+        if (total_reqs + total_fails) > 0
+        else 0
+    )
 
     stats_text = Text()
     stats_text.append("📈 Race Statistics:\n", style="bold")
