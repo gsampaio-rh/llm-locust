@@ -1,0 +1,49 @@
+# Cluster Race Configuration
+# Real OpenShift cluster endpoints for actual racing
+
+race:
+  name: "Cluster Showdown - Real Endpoint Comparison"
+
+  # Race parameters
+  duration: 300  # 5 minutes
+  users: 30      # 30 concurrent users
+  spawn_rate: 3.0  # Spawn 3 users per second
+
+  # Workload configuration
+  dataset: "sharegpt"  # Conversational dataset
+  target_input_tokens: 256
+  target_output_tokens: 128
+
+  # Output configuration
+  output_dir: "results/races"
+
+  # Real cluster engines
+  engines:
+    - name: "vllm"
+      url: "https://vllm-test-vllm-benchmark.apps.cluster-njnqr.njnqr.sandbox1049.opentlc.com"
+      model: "Qwen/Qwen2.5-7B-Instruct"
+      emoji: "🚀"
+      color: "bright_blue"
+      tokenizer: "Qwen/Qwen2.5-7B-Instruct"
+
+    - name: "vllm-cost"
+      url: "https://vllm-cost-vllm-benchmark.apps.cluster-njnqr.njnqr.sandbox1049.opentlc.com"
+      model: "RedHatAI/Qwen2.5-VL-7B-Instruct-FP8-dynamic"
+      emoji: "💰"
+      color: "bright_yellow"
+      tokenizer: "Qwen/Qwen2.5-7B-Instruct"
+
+    - name: "tgi"
+      url: "http://tgi-test-vllm-benchmark.apps.cluster-njnqr.njnqr.sandbox1049.opentlc.com"
+      model: "Qwen/Qwen2.5-7B-Instruct"
+      emoji: "🤖"
+      color: "bright_magenta"
+      tokenizer: "Qwen/Qwen2.5-7B-Instruct"
+
+    - name: "ollama"
+      url: "http://ollama-test-vllm-benchmark.apps.cluster-njnqr.njnqr.sandbox1049.opentlc.com"
+      model: "qwen2.5:7b-instruct-fp16"
+      emoji: "🦙"
+      color: "bright_green"
+      tokenizer: "Qwen/Qwen2.5-7B-Instruct"
+

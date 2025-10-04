@@ -1,0 +1,28 @@
+# LLM Locust Requirements
+# Core dependencies for running LLM load tests and races
+
+# HTTP client
+aiohttp>=3.9.0
+
+# NLP and tokenization
+transformers>=4.40.0
+
+# Numerical computing
+numpy>=1.26.0
+
+# HTTP requests (sync)
+requests>=2.31.0
+
+# Template engine
+jinja2>=3.1.0
+
+# Data manipulation
+pandas>=2.0.0
+pyarrow>=14.0.0
+
+# Configuration (for race configs)
+pyyaml>=6.0.0
+
+# Terminal UI (for interactive racing)
+rich>=13.7.0
+

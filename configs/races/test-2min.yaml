@@ -1,0 +1,35 @@
+# 2-Minute Test Race - Allows time for dataset loading
+# Perfect for seeing actual racing action
+
+race:
+  name: "2-Minute Test - Real Racing Action"
+
+  # 2 minutes (enough time for dataset loading + racing)
+  duration: 120    # 2 minutes
+  users: 5         # 5 concurrent users per engine
+  spawn_rate: 2.0  # Spawn 2 users per second
+
+  # Workload configuration
+  dataset: "sharegpt"  # Conversational dataset
+  target_input_tokens: 256
+  target_output_tokens: 128
+
+  # Output configuration
+  output_dir: "results/races"
+
+  # Real cluster engines
+  engines:
+    - name: "vllm"
+      url: "https://vllm-test-vllm-benchmark.apps.cluster-njnqr.njnqr.sandbox1049.opentlc.com"
+      model: "Qwen/Qwen2.5-7B-Instruct"
+      emoji: "🚀"
+      color: "bright_blue"
+      tokenizer: "Qwen/Qwen2.5-7B-Instruct"
+
+    - name: "tgi"
+      url: "http://tgi-test-vllm-benchmark.apps.cluster-njnqr.njnqr.sandbox1049.opentlc.com"
+      model: "Qwen/Qwen2.5-7B-Instruct"
+      emoji: "🤖"
+      color: "bright_magenta"
+      tokenizer: "Qwen/Qwen2.5-7B-Instruct"
+

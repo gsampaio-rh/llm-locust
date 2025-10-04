@@ -1,0 +1,34 @@
+# Production Candidates Race
+# Compare production-ready deployment options
+
+race:
+  name: "Production Candidates - Final Selection"
+  
+  # Full benchmark parameters (10 minutes)
+  duration: 600
+  users: 50
+  spawn_rate: 5.0
+  
+  # Chat simulation workload
+  dataset: "sharegpt"
+  target_input_tokens: 256
+  target_output_tokens: 128
+  
+  output_dir: "results/races"
+  
+  # Production engine candidates
+  engines:
+    - name: "vllm-prod"
+      url: "https://vllm-prod.example.com"
+      model: "meta-llama/Llama-3.1-8B-Instruct"
+      emoji: "⚡"
+      color: "bright_blue"
+      tokenizer: "meta-llama/Llama-3.1-8B-Instruct"
+    
+    - name: "tgi-prod"
+      url: "https://tgi-prod.example.com"
+      model: "meta-llama/Llama-3.1-8B-Instruct"
+      emoji: "🔥"
+      color: "bright_red"
+      tokenizer: "meta-llama/Llama-3.1-8B-Instruct"
+

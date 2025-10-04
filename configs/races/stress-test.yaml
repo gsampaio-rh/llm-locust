@@ -1,0 +1,41 @@
+# Stress Test Race
+# Push engines to their limits
+
+race:
+  name: "Stress Test - Maximum Load"
+  
+  # Aggressive parameters
+  duration: 300   # 5 minutes of intense load
+  users: 100      # High concurrency
+  spawn_rate: 10.0  # Fast ramp-up
+  
+  # Medium workload (code generation)
+  dataset: "sharegpt"
+  target_input_tokens: 512
+  target_output_tokens: 512
+  
+  output_dir: "results/races"
+  
+  # Engines under stress
+  engines:
+    - name: "vllm-stress"
+      url: "http://localhost:8000"
+      model: "Qwen/Qwen2.5-7B-Instruct"
+      emoji: "💪"
+      color: "bright_yellow"
+      tokenizer: "Qwen/Qwen2.5-7B-Instruct"
+    
+    - name: "tgi-stress"
+      url: "http://localhost:8001"
+      model: "Qwen/Qwen2.5-7B-Instruct"
+      emoji: "🔨"
+      color: "bright_magenta"
+      tokenizer: "Qwen/Qwen2.5-7B-Instruct"
+    
+    - name: "ollama-stress"
+      url: "http://localhost:11434"
+      model: "qwen2.5:7b"
+      emoji: "⚔️"
+      color: "bright_red"
+      tokenizer: "Qwen/Qwen2.5-7B-Instruct"
+

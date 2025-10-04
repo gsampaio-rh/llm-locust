@@ -1,0 +1,34 @@
+# RAG Benchmark Race
+# Test long-context processing performance
+
+race:
+  name: "RAG Benchmark - Long Context Test"
+  
+  # RAG-specific parameters
+  duration: 900  # 15 minutes
+  users: 20      # Fewer users due to long context
+  spawn_rate: 2.0
+  
+  # Long context workload (BillSum dataset)
+  dataset: "billsum"
+  target_input_tokens: 4096  # Long context
+  target_output_tokens: 512
+  
+  output_dir: "results/races"
+  
+  # Engines optimized for long context
+  engines:
+    - name: "vllm-rag"
+      url: "http://localhost:8000"
+      model: "Qwen/Qwen2.5-7B-Instruct"
+      emoji: "📚"
+      color: "blue"
+      tokenizer: "Qwen/Qwen2.5-7B-Instruct"
+    
+    - name: "tgi-rag"
+      url: "http://localhost:8001"
+      model: "Qwen/Qwen2.5-7B-Instruct"
+      emoji: "📖"
+      color: "cyan"
+      tokenizer: "Qwen/Qwen2.5-7B-Instruct"
+

@@ -26,6 +26,8 @@ dependencies = [
     "jinja2>=3.1.0",
     "pandas>=2.0.0",
     "pyarrow>=14.0.0",
+    "pyyaml>=6.0.0",
+    "rich>=13.7.0",
 ]
 
 [project.optional-dependencies]
@@ -86,6 +88,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "numpy.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "yaml.*"
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

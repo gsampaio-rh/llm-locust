@@ -18,6 +18,7 @@ from llm_locust.core.spawner import UserSpawner, start_user_loop
 from llm_locust.core.user import User
 from llm_locust.metrics.collector import MetricsCollector
 from llm_locust.metrics.metrics import LLMMetricsList
+from llm_locust.race import EngineConfig, RaceConfig, RaceOrchestrator, load_race_config
 
 __all__ = [
     "BaseModelClient",
@@ -30,4 +31,8 @@ __all__ = [
     "User",
     "MetricsCollector",
     "LLMMetricsList",
+    "RaceConfig",
+    "EngineConfig",
+    "RaceOrchestrator",
+    "load_race_config",
 ]

@@ -1,0 +1,42 @@
+# Demo Race Configuration
+# A simple 3-engine race for demonstration purposes
+
+race:
+  name: "Demo Race - The Great Model Showdown"
+  
+  # Race parameters
+  duration: 120  # 2 minutes for quick demo
+  users: 10      # 10 concurrent users
+  spawn_rate: 2.0  # Spawn 2 users per second
+  
+  # Workload configuration
+  dataset: "sharegpt"  # Conversational dataset
+  target_input_tokens: 256
+  target_output_tokens: 128
+  
+  # Output configuration
+  output_dir: "results/races"
+  
+  # Engines to race (2-10 supported)
+  engines:
+    - name: "vllm"
+      url: "http://localhost:8000"
+      model: "Qwen/Qwen2.5-7B-Instruct"
+      emoji: "🚀"
+      color: "purple"
+      tokenizer: "Qwen/Qwen2.5-7B-Instruct"
+    
+    - name: "tgi"
+      url: "http://localhost:8001"
+      model: "Qwen/Qwen2.5-7B-Instruct"
+      emoji: "🤖"
+      color: "pink"
+      tokenizer: "Qwen/Qwen2.5-7B-Instruct"
+    
+    - name: "ollama"
+      url: "http://localhost:11434"
+      model: "qwen2.5:7b"
+      emoji: "🦙"
+      color: "green"
+      tokenizer: "Qwen/Qwen2.5-7B-Instruct"
+
