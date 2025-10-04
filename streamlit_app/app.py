@@ -1,7 +1,7 @@
 """
 🎯 LLM Benchmark Comparison Dashboard
 
-Which LLM platform should you choose? Let the data decide.
+Professional analysis tool for comparing LLM serving platforms.
 """
 
 import streamlit as st
@@ -12,32 +12,24 @@ from config import (
     LAYOUT,
     MAX_FILES,
 )
-from lib.dashboard import (
-    find_winners,
-    render_advanced_mode_dashboard,
-    render_recommendation_section,
-    render_simple_mode_dashboard,
-)
 from lib.data_loader import load_multiple_benchmarks
+from lib.statistics import compare_benchmarks
+from lib.visualizations import create_normalized_comparison_chart
 
 # Page configuration
 st.set_page_config(
-    page_title="LLM Benchmark Comparison",
+    page_title="LLM Benchmark Dashboard",
     page_icon=APP_ICON,
     layout=LAYOUT,
     initial_sidebar_state=INITIAL_SIDEBAR_STATE,
 )
 
-# Initialize session state
-if "mode" not in st.session_state:
-    st.session_state["mode"] = "simple"  # Default to simple mode
-
-# ============= SIDEBAR: File Upload and Mode Toggle =============
+# ============= SIDEBAR: File Upload =============
 with st.sidebar:
     st.header("📁 Upload Benchmarks")
 
     uploaded_files = st.file_uploader(
-        f"Drop your CSV files here (max {MAX_FILES} files)",
+        f"Drop CSV files here (max {MAX_FILES})",
         type=["csv"],
         accept_multiple_files=True,
         help="Upload benchmark CSVs from llm-locust",
@@ -49,7 +41,7 @@ with st.sidebar:
             uploaded_files = uploaded_files[:MAX_FILES]
 
         # Load benchmarks
-        with st.spinner("📊 Analyzing your benchmarks..."):
+        with st.spinner("📊 Loading benchmarks..."):
             benchmarks, errors = load_multiple_benchmarks(uploaded_files)
 
         # Store in session state
@@ -70,186 +62,211 @@ with st.sidebar:
         # Clear button
         if st.button("🗑️ Clear All", use_container_width=True):
             st.session_state.clear()
-            st.session_state["mode"] = "simple"
             st.rerun()
-
-    # Mode toggle (only show if data is loaded)
-    if "benchmarks" in st.session_state and st.session_state.get("benchmarks"):
-        st.markdown("---")
-        st.markdown("**View Mode:**")
-
-        current_mode = st.session_state.get("mode", "simple")
-
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button(
-                "💡 Simple",
-                use_container_width=True,
-                disabled=(current_mode == "simple"),
-                type="primary" if current_mode == "simple" else "secondary",
-            ):
-                st.session_state["mode"] = "simple"
-                st.rerun()
-
-        with col2:
-            if st.button(
-                "🔬 Advanced",
-                use_container_width=True,
-                disabled=(current_mode == "advanced"),
-                type="primary" if current_mode == "advanced" else "secondary",
-            ):
-                st.session_state["mode"] = "advanced"
-                st.rerun()
-
-        if current_mode == "simple":
-            st.caption("📖 Easy-to-understand insights")
-        else:
-            st.caption("📊 Detailed technical analysis")
 
 # ============= MAIN CONTENT =============
 
 if "benchmarks" not in st.session_state or not st.session_state["benchmarks"]:
     # ============= WELCOME SCREEN =============
-    st.title("🎯 Which LLM Platform Should You Choose?")
-    st.markdown("### Let data guide your infrastructure decisions")
+    st.title("🎯 LLM Benchmark Dashboard")
+    st.markdown("### Professional analysis tool for comparing LLM serving platforms")
 
     st.markdown("---")
 
     col1, col2 = st.columns([3, 2])
 
     with col1:
-        st.markdown("#### 🚀 How It Works")
-        st.markdown(
-            """
-        1. **Run benchmarks** using llm-locust on your platforms
-        2. **Upload the CSV files** using the sidebar
-        3. **Get clear answers** about which platform is best
+        st.markdown("#### 🚀 Quick Start")
+        st.markdown("""
+        1. **Run benchmarks** using llm-locust
+        2. **Upload CSV files** via the sidebar
+        3. **Analyze results** with statistical rigor
         
-        No PhD required. Just upload and understand.
-        """
-        )
+        Built for platform engineers, ML engineers, and SREs.
+        """)
 
-        st.info("👈 Start by uploading your benchmark files in the sidebar")
+        st.info("👈 Upload your benchmark files to begin")
 
     with col2:
-        st.markdown("#### ✨ What You'll Learn")
-        st.markdown(
-            """
-        - Which platform is **fastest**
-        - Which is most **reliable**
-        - What it means for **your users**
-        - Whether the difference **matters**
-        """
-        )
+        st.markdown("#### 📊 Features")
+        st.markdown("""
+        - Statistical significance testing
+        - Multi-platform comparison
+        - Latency, throughput, reliability analysis
+        - Interactive visualizations
+        - Export-ready charts
+        """)
 
     st.markdown("---")
 
-    # Feature overview
-    col1, col2, col3 = st.columns(3)
+    st.markdown("#### 📁 Expected File Format")
+    st.code("""
+Filename: {platform}-{YYYYMMDD}-{HHMMSS}-{benchmark-id}.csv
+Example: vllm-20251003-175002-1a-chat-simulation.csv
 
-    with col1:
-        st.markdown("##### 💡 Simple Mode")
-        st.markdown(
-            "Plain English explanations. Perfect for product managers, executives, and anyone making decisions."
-        )
-
-    with col2:
-        st.markdown("##### 🔬 Advanced Mode")
-        st.markdown(
-            "Deep technical analysis. Statistical tests, distributions, and raw metrics for engineers."
-        )
-
-    with col3:
-        st.markdown("##### 🎯 Both Modes")
-        st.markdown("One click to switch between them. Start simple, go deep when needed.")
-
-    st.markdown("---")
-
-    # Sample insight
-    st.markdown("#### 📖 Example Insight (Simple Mode)")
-    st.info(
-        """
-    **🏆 Recommendation: Use vLLM**
-    
-    Why?
-    - ✅ **19% faster** - Users get responses 200ms sooner
-    - ✅ **99.8% success rate** - Only 2 failures per 1000 requests  
-    - ✅ **Consistent** - Fast for everyone, not just sometimes
-    
-    **What this means:** Your users will have a noticeably better experience, and you'll handle support tickets less often.
-    """
-    )
+Required columns:
+- request_id, timestamp, user_id, user_request_num
+- input_tokens, output_tokens
+- ttft_ms, tpot_ms, end_to_end_s
+- total_tokens_per_sec, output_tokens_per_sec
+- status_code
+    """, language="text")
 
 else:
-    # ============= DASHBOARD WITH DATA =============
+    # ============= EXECUTIVE SUMMARY =============
     benchmarks = st.session_state["benchmarks"]
-    mode = st.session_state.get("mode", "simple")
 
-    # Find winners once for all views
-    winners = find_winners(benchmarks)
+    st.title("🎯 Executive Summary")
+    st.caption(f"Analysis of {len(benchmarks)} platform(s)")
 
-    # Render appropriate dashboard based on mode
-    if mode == "simple":
-        render_simple_mode_dashboard(benchmarks, winners)
-        render_recommendation_section(benchmarks)
-    else:
-        render_advanced_mode_dashboard(benchmarks, winners)
+    # Metadata summary
+    total_requests = sum(b.metadata.total_requests for b in benchmarks)
+    avg_duration = sum(b.metadata.duration_seconds for b in benchmarks) / len(benchmarks)
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Platforms", len(benchmarks))
+    with col2:
+        st.metric("Total Requests", f"{total_requests:,}")
+    with col3:
+        st.metric("Avg Duration", f"{avg_duration:.0f}s")
+    with col4:
+        oldest_benchmark = min(b.metadata.timestamp for b in benchmarks)
+        st.metric("Date", oldest_benchmark.strftime("%b %d, %Y"))
 
-        # Additional technical sections for advanced mode
-        st.markdown("## 📋 Comparative Analysis")
+    st.markdown("---")
 
-        if len(benchmarks) >= 2:
-            comparison_data = []
-            for benchmark in benchmarks:
-                comparison_data.append(
-                    {
-                        "Platform": benchmark.metadata.platform,
-                        "Requests": f"{benchmark.metadata.total_requests:,}",
-                        "Success %": f"{benchmark.success_rate*100:.2f}",
-                        "TTFT P50": f"{benchmark.ttft_p50:.1f}ms",
-                        "TTFT P99": f"{benchmark.ttft_p99:.1f}ms",
-                        "TPOT P50": f"{benchmark.tpot_p50:.1f}ms",
-                        "Throughput": f"{benchmark.throughput_avg:.1f}",
-                        "RPS": f"{benchmark.rps:.2f}",
-                    }
-                )
+    # Find winners
+    winner_ttft_idx = min(range(len(benchmarks)), key=lambda i: benchmarks[i].ttft_p50)
+    winner_throughput_idx = max(range(len(benchmarks)), key=lambda i: benchmarks[i].throughput_avg)
+    winner_reliability_idx = max(range(len(benchmarks)), key=lambda i: benchmarks[i].success_rate)
 
-            st.table(comparison_data)
-
-            # Winners summary
-            st.markdown("### 🏆 Performance Leaders")
-            col1, col2, col3, col4 = st.columns(4)
-
-            with col1:
-                st.metric(
-                    "⚡ Best TTFT P50",
-                    benchmarks[winners["ttft"]].metadata.platform,
-                    f"{benchmarks[winners['ttft']].ttft_p50:.1f}ms",
-                )
-
-            with col2:
-                st.metric(
-                    "⚡ Best TTFT P99",
-                    benchmarks[winners["ttft"]].metadata.platform,
-                    f"{benchmarks[winners['ttft']].ttft_p99:.1f}ms",
-                )
-
-            with col3:
-                st.metric(
-                    "🚀 Best Throughput",
-                    benchmarks[winners["throughput"]].metadata.platform,
-                    f"{benchmarks[winners['throughput']].throughput_avg:.1f}",
-                )
-
-            with col4:
-                st.metric(
-                    "✅ Best Reliability",
-                    benchmarks[winners["reliability"]].metadata.platform,
-                    f"{benchmarks[winners['reliability']].success_rate*100:.3f}%",
-                )
-
+    # Recommendation
+    if len(benchmarks) >= 2:
+        st.markdown("## 🏆 Recommendation")
+        
+        # Determine overall winner (prioritize latency + reliability)
+        winner = benchmarks[winner_ttft_idx]
+        
+        # Check if statistically significant
+        if len(benchmarks) == 2:
+            comparison = compare_benchmarks(benchmarks[0], benchmarks[1])
+            is_significant = comparison.ttft_significant
+            winner_name = winner.metadata.platform
         else:
-            st.info("Upload at least 2 benchmarks for comparison")
+            # For 3+ platforms, just show fastest
+            is_significant = True  # Assume significant for now
+            winner_name = winner.metadata.platform
+        
+        if is_significant:
+            st.success(f"""
+            ### {winner_name}
+            
+            **Recommended based on:**
+            - ⚡ Fastest TTFT: {winner.ttft_p50:.0f}ms (P50)
+            - 📊 P99: {winner.ttft_p99:.0f}ms
+            - ✅ Reliability: {winner.success_rate*100:.2f}%
+            """)
+        else:
+            st.info(f"""
+            ### {winner_name} (slight edge)
+            
+            **Note:** Differences are not statistically significant.
+            All platforms perform similarly.
+            """)
+        
+        if len(benchmarks) == 2:
+            other = benchmarks[1] if winner == benchmarks[0] else benchmarks[0]
+            diff_pct = ((other.ttft_p50 - winner.ttft_p50) / other.ttft_p50) * 100
+            
+            st.caption(f"→ {diff_pct:.1f}% faster than {other.metadata.platform}")
+        
+        st.markdown("[📊 View Detailed Comparison →](#)")
+        st.caption("Click 'Comparison' in the sidebar for full analysis")
 
-        st.markdown("---")
-        st.markdown("👈 Navigate to analysis pages in the sidebar for detailed charts")
+    st.markdown("---")
+
+    # Key metrics at-a-glance
+    st.markdown("## 📊 Key Metrics")
+    
+    cols = st.columns(len(benchmarks))
+    
+    for idx, benchmark in enumerate(benchmarks):
+        with cols[idx]:
+            # Platform name with winner badge
+            is_winner = (
+                idx == winner_ttft_idx or 
+                idx == winner_throughput_idx or 
+                idx == winner_reliability_idx
+            )
+            
+            header = f"🏆 **{benchmark.metadata.platform}**" if is_winner else f"**{benchmark.metadata.platform}**"
+            st.markdown(header)
+            
+            # TTFT
+            ttft_color = "🟢" if benchmark.ttft_p50 < 500 else "🟡" if benchmark.ttft_p50 < 1000 else "🔴"
+            st.metric(
+                "TTFT P50",
+                f"{benchmark.ttft_p50:.0f}ms",
+                delta=f"{ttft_color} P99: {benchmark.ttft_p99:.0f}ms",
+                delta_color="off",
+            )
+            
+            # Throughput
+            st.metric(
+                "Throughput",
+                f"{benchmark.throughput_avg:.0f}",
+                delta=f"tok/s",
+                delta_color="off",
+            )
+            
+            # Reliability
+            reliability_color = "🟢" if benchmark.success_rate >= 0.999 else "🟡" if benchmark.success_rate >= 0.99 else "🔴"
+            st.metric(
+                "Success Rate",
+                f"{benchmark.success_rate*100:.2f}%",
+                delta=f"{reliability_color} {benchmark.metadata.failed_requests} failures",
+                delta_color="off",
+            )
+            
+            st.caption(f"{benchmark.metadata.total_requests:,} requests")
+
+    st.markdown("---")
+
+    # Normalized comparison
+    if len(benchmarks) >= 2:
+        st.markdown("## 🎨 Normalized Performance")
+        st.caption("All metrics scaled 0-100 for easy comparison (100 = best in category)")
+        
+        fig = create_normalized_comparison_chart(benchmarks)
+        st.plotly_chart(fig, use_container_width=True)
+        
+        with st.expander("ℹ️ How to Read This Chart"):
+            st.markdown("""
+            **Normalized scoring:**
+            - Each metric is scaled to 0-100 within the tested platforms
+            - 100 = Best performer for that metric
+            - 0 = Worst performer for that metric
+            
+            **Note:**
+            - TTFT and TPOT: Lower latency = Higher score (inverted)
+            - Throughput and Success Rate: Higher value = Higher score
+            
+            **Use this to:**
+            - See at-a-glance which platform excels where
+            - Identify trade-offs (e.g., fast but less reliable)
+            - Make balanced decisions across multiple metrics
+            """)
+
+    st.markdown("---")
+
+    # Navigation help
+    st.markdown("## 📖 Deep Dive Analysis")
+    st.markdown("""
+    Navigate to detailed analysis pages in the sidebar:
+    
+    - **Comparison** - Side-by-side comparison with statistical tests
+    - **Latency Analysis** - TTFT, TPOT, and end-to-end latency
+    - **Throughput Analysis** - TPS, RPS, and stability metrics
+    - **Reliability** - Success rates, error analysis, and failure patterns
+    """)
