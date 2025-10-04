@@ -13,7 +13,7 @@ import streamlit as st
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from config import CLOUD_PROVIDERS, GPU_PRICING, GPU_TYPES
+from config import INSTANCE_CONFIGS
 
 st.set_page_config(page_title="Cost Analysis", page_icon="💰", layout="wide")
 
@@ -30,78 +30,109 @@ st.caption("Calculate and compare Total Cost of Ownership (TCO) across platforms
 st.markdown("---")
 
 # ============= COST INPUT SECTION =============
-st.subheader("⚙️ Configure Cost Parameters")
+st.subheader("⚙️ Select Instance Type")
+st.caption("Just pick your machine - pricing auto-fills!")
 
 # Initialize session state for cost config
 if "cost_config" not in st.session_state:
     st.session_state["cost_config"] = {}
+    # Default to first instance config for each platform
+    default_instance = list(INSTANCE_CONFIGS.keys())[0]
     for benchmark in benchmarks:
+        config = INSTANCE_CONFIGS[default_instance]
         st.session_state["cost_config"][benchmark.metadata.platform] = {
-            "gpu_type": "H100",
-            "cloud_provider": "AWS",
-            "instance_type": "p5.48xlarge",
-            "cost_per_hour": 30.00,
+            "instance_name": default_instance,
+            "gpu_type": config["gpu"],
+            "gpu_count": config["gpu_count"],
+            "cloud_provider": config["provider"],
+            "cost_per_hour": config["cost_per_hour"],
         }
 
 # Create tabs for each platform
 tabs = st.tabs([b.metadata.platform for b in benchmarks])
 
+instance_list = list(INSTANCE_CONFIGS.keys())
+
 for idx, benchmark in enumerate(benchmarks):
     platform = benchmark.metadata.platform
     
     with tabs[idx]:
-        col1, col2 = st.columns(2)
+        # Simple instance dropdown
+        current_instance = st.session_state["cost_config"][platform].get("instance_name", instance_list[0])
         
-        with col1:
-            # GPU Type
-            gpu_type = st.selectbox(
-                "GPU Type",
-                GPU_TYPES,
-                key=f"gpu_{platform}",
-                index=GPU_TYPES.index(st.session_state["cost_config"][platform]["gpu_type"]),
-            )
+        selected_instance = st.selectbox(
+            "Select Instance Type",
+            instance_list,
+            key=f"instance_{platform}",
+            index=instance_list.index(current_instance) if current_instance in instance_list else 0,
+            help="Choose from common cloud instances with pre-filled pricing",
+        )
+        
+        # Get config from selection
+        config = INSTANCE_CONFIGS[selected_instance]
+        
+        # Show details
+        if selected_instance == "Custom (Enter Manually)":
+            # Manual input mode
+            col1, col2 = st.columns(2)
             
-            # Cloud Provider
-            cloud_provider = st.selectbox(
-                "Cloud Provider",
-                CLOUD_PROVIDERS,
-                key=f"cloud_{platform}",
-                index=CLOUD_PROVIDERS.index(st.session_state["cost_config"][platform]["cloud_provider"]),
-            )
-        
-        with col2:
-            # Instance Type
-            instance_type = st.text_input(
-                "Instance Type",
-                value=st.session_state["cost_config"][platform]["instance_type"],
-                key=f"instance_{platform}",
-                help="e.g., p5.48xlarge, a3-highgpu-8g, ND_H100_v5",
-            )
+            with col1:
+                gpu_type = st.text_input(
+                    "GPU Type",
+                    value=st.session_state["cost_config"][platform].get("gpu_type", "H100"),
+                    key=f"gpu_manual_{platform}",
+                )
+                gpu_count = st.number_input(
+                    "GPU Count",
+                    min_value=1,
+                    max_value=16,
+                    value=st.session_state["cost_config"][platform].get("gpu_count", 1),
+                    key=f"gpu_count_manual_{platform}",
+                )
             
-            # Cost per hour (auto-filled from pricing table)
-            default_cost = GPU_PRICING.get(cloud_provider, {}).get(gpu_type, 0.0)
+            with col2:
+                cloud_provider = st.text_input(
+                    "Cloud Provider",
+                    value=st.session_state["cost_config"][platform].get("cloud_provider", "AWS"),
+                    key=f"provider_manual_{platform}",
+                )
+                cost_per_hour = st.number_input(
+                    "Cost per Hour ($)",
+                    min_value=0.0,
+                    max_value=1000.0,
+                    value=st.session_state["cost_config"][platform].get("cost_per_hour", 0.0),
+                    step=0.50,
+                    key=f"cost_manual_{platform}",
+                )
             
-            cost_per_hour = st.number_input(
-                "Cost per Hour ($)",
-                min_value=0.0,
-                max_value=1000.0,
-                value=default_cost,
-                step=0.50,
-                key=f"cost_{platform}",
-                help="Auto-filled from known pricing, edit if needed",
-            )
-        
-        # Update session state
-        st.session_state["cost_config"][platform] = {
-            "gpu_type": gpu_type,
-            "cloud_provider": cloud_provider,
-            "instance_type": instance_type,
-            "cost_per_hour": cost_per_hour,
-        }
-        
-        # Show auto-fill note
-        if cost_per_hour == default_cost and default_cost > 0:
-            st.caption(f"✅ Auto-filled: ${default_cost:.2f}/hr for {gpu_type} on {cloud_provider}")
+            # Update config
+            st.session_state["cost_config"][platform] = {
+                "instance_name": selected_instance,
+                "gpu_type": gpu_type,
+                "gpu_count": gpu_count,
+                "cloud_provider": cloud_provider,
+                "cost_per_hour": cost_per_hour,
+            }
+        else:
+            # Auto-filled from pre-configured instance
+            st.session_state["cost_config"][platform] = {
+                "instance_name": selected_instance,
+                "gpu_type": config["gpu"],
+                "gpu_count": config["gpu_count"],
+                "cloud_provider": config["provider"],
+                "cost_per_hour": config["cost_per_hour"],
+            }
+            
+            # Show what was auto-filled
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("GPU", f"{config['gpu_count']}x {config['gpu']}")
+            with col2:
+                st.metric("Provider", config["provider"])
+            with col3:
+                st.metric("Cost", f"${config['cost_per_hour']:.2f}/hr")
+            
+            st.caption(f"✅ All pricing auto-filled for {selected_instance}")
 
 st.markdown("---")
 
@@ -118,6 +149,8 @@ for benchmark in benchmarks:
     # Get throughput metrics
     throughput_avg = benchmark.throughput_avg  # tokens/sec
     cost_per_hour = config["cost_per_hour"]
+    gpu_type = config["gpu_type"]
+    gpu_count = config.get("gpu_count", 1)
     
     if throughput_avg > 0:
         # Calculate costs
@@ -140,9 +173,9 @@ for benchmark in benchmarks:
         
         cost_results.append({
             "Platform": platform,
-            "GPU": config["gpu_type"],
+            "Instance": config["instance_name"],
+            "GPUs": f"{gpu_count}x {gpu_type}",
             "Provider": config["cloud_provider"],
-            "Instance": config["instance_type"],
             "$/Hour": f"${cost_per_hour:.2f}",
             "$/1M Tokens": f"${cost_per_million_tokens:.2f}",
             "$/1K Requests": f"${cost_per_1k_requests:.3f}",
@@ -151,9 +184,9 @@ for benchmark in benchmarks:
     else:
         cost_results.append({
             "Platform": platform,
-            "GPU": config["gpu_type"],
+            "Instance": config["instance_name"],
+            "GPUs": f"{gpu_count}x {gpu_type}",
             "Provider": config["cloud_provider"],
-            "Instance": config["instance_type"],
             "$/Hour": f"${cost_per_hour:.2f}",
             "$/1M Tokens": "N/A (zero throughput)",
             "$/1K Requests": "N/A",
@@ -255,6 +288,67 @@ for benchmark in benchmarks:
 
 st.table(monthly_projections)
 
+st.caption("""
+**How we calculate Instances Needed:**
+
+We determine the minimum number of instances required to handle your target load:
+
+1. **Calculate demand**: `Target QPS × Average Output Tokens = Total Tokens/Second Needed`
+2. **Determine capacity**: Each instance can produce `Throughput (tokens/sec)` from benchmark results
+3. **Scale to meet demand**: `Instances Needed = ⌈Total Tokens Needed ÷ Instance Throughput⌉` (rounded up)
+
+**Example**: If you need 1,000 tokens/sec and each instance produces 250 tokens/sec, you need 4 instances.
+
+*Note: This is a simplified calculation. In production, you'd also need to account for:*
+- *Headroom for traffic spikes (typically 20-30% buffer)*
+- *High availability (multi-AZ redundancy)*
+- *Rolling updates and maintenance windows*
+""")
+
+# Show detailed calculation breakdown
+with st.expander("🔢 Show Calculation Breakdown for Each Platform"):
+    st.markdown(f"**Target Load:** {target_qps} QPS (queries per second)")
+    st.markdown("---")
+    
+    for benchmark in benchmarks:
+        platform = benchmark.metadata.platform
+        
+        if benchmark.throughput_avg > 0:
+            success_df = benchmark.df[benchmark.df["status_code"] == 200]
+            
+            if len(success_df) > 0:
+                avg_output_tokens = success_df["output_tokens"].mean()
+                tokens_per_second_needed = target_qps * avg_output_tokens
+                instances_needed = max(1, int(np.ceil(tokens_per_second_needed / benchmark.throughput_avg)))
+                
+                st.markdown(f"### {platform}")
+                st.code(f"""
+Step 1: Calculate Demand
+    Target QPS                  = {target_qps} requests/sec
+    × Avg Output Tokens         = {avg_output_tokens:.2f} tokens/request
+    ─────────────────────────────────────────────────────
+    = Tokens Needed             = {tokens_per_second_needed:.2f} tokens/sec
+
+Step 2: Check Instance Capacity
+    Instance Throughput         = {benchmark.throughput_avg:.2f} tokens/sec
+    (from benchmark results)
+
+Step 3: Calculate Instances Needed
+    Tokens Needed               = {tokens_per_second_needed:.2f} tokens/sec
+    ÷ Instance Throughput       = {benchmark.throughput_avg:.2f} tokens/sec
+    ─────────────────────────────────────────────────────
+    = Raw Result                = {tokens_per_second_needed / benchmark.throughput_avg:.4f}
+    = Rounded Up (⌈⌉)           = {instances_needed} instance(s)
+
+Result: You need {instances_needed} instance(s) to handle {target_qps} QPS
+""", language="text")
+            else:
+                st.markdown(f"### {platform}")
+                st.warning("No successful requests in benchmark data")
+        else:
+            st.markdown(f"### {platform}")
+            st.warning("Zero throughput - cannot calculate instances needed")
+
 st.markdown("---")
 
 # ============= COST INSIGHTS =============
@@ -348,43 +442,40 @@ st.markdown("---")
 # ============= HELP SECTION =============
 with st.expander("💡 How to Use This Calculator"):
     st.markdown("""
-    **Step 1: Configure each platform**
-    - Select GPU type (H100, A100, etc.)
-    - Select cloud provider (AWS, GCP, Azure, On-prem)
-    - Enter instance type (optional, for reference)
-    - Cost per hour is auto-filled from known pricing, but you can edit it
+    **Step 1: Select instance type for each platform**
+    - Choose from pre-configured cloud instances (AWS, GCP, Azure)
+    - Or select "Custom (Enter Manually)" to input your own pricing
+    - Pricing auto-fills based on public cloud rates
     
     **Step 2: Review cost efficiency**
-    - **$/1M Tokens**: The most important metric - cost to generate 1 million tokens
-    - **Lower is better** for all cost metrics
-    - **Tokens per $**: How many tokens you get for each dollar spent (higher is better)
+    - **$/1M Tokens**: Cost to generate 1 million tokens (lower is better)
+    - **$/1K Requests**: Cost per 1,000 requests (lower is better)
+    - **Tokens per $**: Efficiency metric (higher is better)
     
     **Step 3: Monthly projections**
     - Set your expected QPS (queries per second)
     - Set operating hours per month
-    - See how many instances you need and total monthly cost
+    - **Instances Needed** shows the minimum number of instances to handle your target load
+        - Calculated as: `⌈(Target QPS × Avg Output Tokens) ÷ Instance Throughput⌉`
+        - This ensures you have enough capacity to meet demand
+        - In production, add 20-30% buffer for spikes and redundancy
+    - See total monthly infrastructure cost across all instances
     
     **Notes:**
     - Pricing is approximate and based on public cloud pricing as of Oct 2025
-    - On-prem costs are amortized estimates (include hardware, power, maintenance)
-    - Actual costs may vary based on discounts, region, utilization, etc.
-    - This calculator assumes single-GPU instances; adjust for multi-GPU configs
+    - On-prem costs are amortized estimates (hardware + power + maintenance)
+    - Actual costs may vary based on discounts, region, utilization, reserved instances, etc.
+    - Multi-GPU instances are supported (pricing is per instance, not per GPU)
     """)
 
-with st.expander("📋 GPU Pricing Reference"):
-    st.markdown("**AWS Pricing:**")
-    for gpu, price in GPU_PRICING["AWS"].items():
-        st.markdown(f"- {gpu}: ${price:.2f}/hr")
+with st.expander("📋 Available Instance Types"):
+    st.markdown("**Pre-configured instances with auto-filled pricing:**")
     
-    st.markdown("**GCP Pricing:**")
-    for gpu, price in GPU_PRICING["GCP"].items():
-        st.markdown(f"- {gpu}: ${price:.2f}/hr")
-    
-    st.markdown("**Azure Pricing:**")
-    for gpu, price in GPU_PRICING["Azure"].items():
-        st.markdown(f"- {gpu}: ${price:.2f}/hr")
-    
-    st.markdown("**On-prem (Amortized):**")
-    for gpu, price in GPU_PRICING["On-prem"].items():
-        st.markdown(f"- {gpu}: ${price:.2f}/hr (estimated)")
+    for instance_name, config in INSTANCE_CONFIGS.items():
+        if instance_name != "Custom (Enter Manually)":
+            st.markdown(
+                f"- **{instance_name}**: "
+                f"{config['gpu_count']}x {config['gpu']} on {config['provider']} - "
+                f"${config['cost_per_hour']:.2f}/hr"
+            )
 

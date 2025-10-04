@@ -66,8 +66,8 @@ TARGET_OUTPUT_TOKENS = 512
 DEFAULT_DURATION = 900  # 15 minutes
 DEFAULT_USERS = 20
 DEFAULT_SPAWN_RATE = 2.0  # Users per second (slower than Test 1a due to larger context)
-INPUT_TOKEN_MIN = 3500  # ~4096 target with some variance
-INPUT_TOKEN_MAX = 4500
+INPUT_TOKEN_MIN = 800   # Adjusted for servers with 1024 max input tokens
+INPUT_TOKEN_MAX = 950   # Safely below 1024 limit, leaves room for 512 output tokens
 
 # Per-request logging defaults
 LOG_TO_CONSOLE = True
@@ -212,6 +212,11 @@ def main() -> None:
     logger.info("  • Watch for OOM errors and throughput degradation")
     logger.info("  • Measure tokens/second efficiency")
     logger.info("")
+    logger.info("⚙️  Server Requirements:")
+    logger.info(f"  • Minimum max_model_len: {INPUT_TOKEN_MAX + TARGET_OUTPUT_TOKENS} tokens")
+    logger.info(f"    ({INPUT_TOKEN_MAX} input + {TARGET_OUTPUT_TOKENS} output)")
+    logger.info(f"  • For full 4K context: {TARGET_INPUT_TOKENS + TARGET_OUTPUT_TOKENS}+ tokens")
+    logger.info("")
     logger.info("=" * 80)
     logger.info("")
 
@@ -242,7 +247,16 @@ def main() -> None:
     
     if len(prompts) < 10:
         logger.error(f"❌ Insufficient prompts found ({len(prompts)}). Need at least 10.")
-        logger.error("   Try adjusting token range or check dataset availability.")
+        logger.error(f"   Token range: {INPUT_TOKEN_MIN}-{INPUT_TOKEN_MAX}")
+        logger.error("")
+        logger.error("   💡 BillSum bills distribution:")
+        logger.error("      • Most bills: 1500-3500 tokens")
+        logger.error("      • Large bills: 3500-5000+ tokens")
+        logger.error("")
+        logger.error("   📋 To fix:")
+        logger.error("      • Delete datasets/billsum.jsonl cache and retry")
+        logger.error("      • Script will re-download with correct token range")
+        logger.error("")
         sys.exit(1)
     
     logger.info(f"✅ Loaded {len(prompts)} long-context prompts")

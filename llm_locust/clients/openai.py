@@ -103,13 +103,30 @@ class OpenAIChatStreamingClient(BaseModelClient):
                         if line == "[DONE]":
                             continue
                         try:
-                            text = json.loads(line)["choices"][0]["delta"]["content"]
+                            parsed = json.loads(line)
+                            
+                            # Check for error responses
+                            if "error" in parsed:
+                                error_msg = parsed["error"].get("message", "Unknown error")
+                                logger.error(f"Server returned error: {error_msg}")
+                                # Return empty list for error responses
+                                self.chunk_cache[chunk] = []
+                                return []
+                            
+                            # Parse normal response
+                            text = parsed["choices"][0]["delta"]["content"]
                             output += self.tokenizer.encode(
                                 text, add_special_tokens=False
                             )
+                        except KeyError as e:
+                            # Missing expected field - likely an error or unexpected response
+                            logger.warning(
+                                f"Missing expected field in response: {line[:200]}, error: {e}"
+                            )
+                            continue
                         except Exception as e:
                             logger.warning(
-                                f"Error while parsing chunk: {line}, error: {e}"
+                                f"Error while parsing chunk: {line[:200]}, error: {e}"
                             )
                             continue
                     else:
