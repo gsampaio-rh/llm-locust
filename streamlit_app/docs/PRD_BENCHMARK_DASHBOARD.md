@@ -9,9 +9,11 @@
 
 ## Executive Summary
 
-Build a **production-grade Streamlit dashboard** for visualizing, comparing, and analyzing LLM inference benchmark results across multiple serving platforms (vLLM, TGI, Ollama, OpenAI, etc.). The dashboard enables platform engineers, ML engineers, and decision-makers to make data-driven choices about LLM serving infrastructure by providing deep, interactive analysis of performance characteristics.
+Build a **production-grade Streamlit dashboard** for visualizing, comparing, and analyzing LLM inference benchmark results across multiple serving platforms (vLLM, TGI, Ollama, OpenAI, etc.). The dashboard enables platform engineers, ML engineers, and SREs to make data-driven choices about LLM serving infrastructure by providing deep, interactive analysis of performance characteristics.
 
 **Core Value Proposition:** Transform raw CSV benchmark data into actionable intelligence through intuitive visualizations, statistical analysis, and automated insights.
+
+**Design Approach:** Single professional technical view with visual metric cards for clarity. No dual-mode complexity.
 
 ---
 
@@ -34,76 +36,80 @@ Build a **production-grade Streamlit dashboard** for visualizing, comparing, and
 - Missed optimization opportunities due to lack of visibility
 - **Exclusion of key decision-makers** who don't understand the technical details
 
-### 1.2 Target Users (Dual Personas)
+### 1.2 Target Users
 
-**🎯 Primary Goal: "Make it simple enough for a PM, powerful enough for a Principal Engineer"**
+**🎯 Primary Goal: "Professional tool for technical teams"**
 
-#### Persona 1: "The Decision Maker" (Beginner/Business)
-**Who:** Product Managers, Engineering Managers, Executives, New Engineers
-
-**Needs:**
-- **Simple answer**: "Which platform is faster?"
-- **Clear visualization**: Understand at a glance
-- **Plain English**: No jargon, explain what matters
-- **Business context**: Cost, user experience, reliability
-- **Confidence**: Know the recommendation is trustworthy
-
-**Pain Points:**
-- Intimidated by technical metrics
-- Don't know what "P99" means or why it matters
-- Need to make decisions without deep ML knowledge
-- Want to understand trade-offs simply
-
-**Quote:** *"I just need to know: Will users notice the difference?"*
-
-#### Persona 2: "The Engineer" (Advanced/Technical)
+#### Primary Persona: "The Technical Expert"
 **Who:** Platform Engineers, ML Engineers, SREs, Performance Specialists
 
 **Needs:**
+- **Clear visual comparison**: Color-coded metric cards for at-a-glance understanding
 - **Deep analysis**: Statistical significance, distributions, outliers
-- **Raw data access**: Export, drill-down, custom views
-- **Technical precision**: Exact percentiles, confidence intervals
-- **Comparative analysis**: Side-by-side, temporal patterns
+- **Multi-platform timelines**: See stability and degradation patterns
+- **Technical precision**: Exact percentiles, p-values, effect sizes
+- **Raw data access**: Export capabilities and detailed tables
 - **Debug capability**: Find anomalies, investigate failures
 
 **Pain Points:**
-- Simplified views hide important details
-- Need access to raw metrics for debugging
-- Want to verify statistical significance
-- Need to explain technical decisions to non-technical stakeholders
+- Need to compare multiple platforms quickly
+- Want statistical rigor without manual calculation
+- Need to detect performance degradation over time
+- Must justify infrastructure decisions with data
 
-**Quote:** *"I need to see the P99.9 tail latency and prove this isn't just noise."*
+**Quote:** *"Show me the P99, prove it's statistically significant, and let me see if performance degrades over time."*
 
-### 1.3 Design Philosophy: "Progressive Disclosure"
+#### Secondary Persona: "The Manager"
+**Who:** Engineering Managers, Technical Leads
 
-**Inspired by:** Steve Jobs' "It just works" + Bret Victor's "Explorable Explanations"
+**Needs:**
+- **Quick executive summary**: Who won and why
+- **Visual clarity**: Metric cards with color coding
+- **Clear recommendations**: Data-driven infrastructure choices
+- **Cost implications**: TCO analysis for budgeting
+
+**Pain Points:**
+- Need to make decisions quickly
+- Want confidence in recommendations
+- Must balance performance vs cost
+- Need to communicate decisions to leadership
+
+**Quote:** *"Give me the winner, show me why with clear visuals, and tell me what it costs."*
+
+### 1.3 Design Philosophy: "Professional Simplicity"
+
+**Inspired by:** FAANG engineering dashboards + Clear visual hierarchy
 
 **Core Principles:**
 
-1. **Default to Simple, Allow Complexity**
-   - Start with the answer ("vLLM is faster")
-   - One click to see why (charts)
-   - Another click for deep technical details
+1. **Visual First, Technical Second**
+   - Color-coded metric cards for instant understanding
+   - Green = excellent, Yellow = good, Red = needs attention
+   - Winner badges (🏆) for immediate identification
+   - Then provide deep technical details below
 
-2. **Tell a Story, Not Just Data**
-   - Every metric explained in human terms
-   - Context before numbers
-   - "What this means for you" summaries
+2. **Technical Rigor Without Complexity**
+   - Statistical tests integrated naturally
+   - P-values and effect sizes shown in context
+   - Tooltips for explanations (not separate "Simple mode")
+   - Professional tone throughout
 
-3. **Progressive Disclosure**
-   - Beginners see: "✅ Fast" or "⚠️ Slower"
-   - Intermediate: Charts and percentiles
-   - Advanced: Statistical tests, raw data, distributions
+3. **Single Source of Truth**
+   - No duplicate information
+   - Each metric shown once, in the right place
+   - Clear navigation: Comparison → Deep Dives
 
-4. **No Jargon Without Explanation**
-   - Every technical term gets a tooltip
-   - Inline explanations in plain English
-   - "Why this matters" context
+4. **Information Density = User Control**
+   - Key metrics always visible
+   - Expandable sections for details
+   - Tables for comprehensive data
+   - Charts for patterns and trends
 
 5. **Beautiful AND Functional**
-   - Clean, uncluttered interface
-   - Information density increases with complexity
+   - Clean, professional interface
+   - Publication-ready charts
    - Consistent visual language
+   - Fast, responsive interactions
 
 ---
 
@@ -265,30 +271,18 @@ Acceptance Criteria:
 
 ### 4.2 Visualization & Analytics
 
-#### FR-4: Overview Dashboard (Dual Mode)
-- **FR-4.1** **Mode Toggle**: Switch between Simple and Advanced views
-- **FR-4.2** **Simple Mode Features**:
-  - Clear recommendation ("We recommend X")
-  - Plain English explanations (no jargon)
-  - Visual indicators (🟢🟡🔴 for speed, stars for reliability)
-  - "What This Means For You" business context
-  - Progressive disclosure buttons to drill deeper
-- **FR-4.3** **Advanced Mode Features**:
-  - Summary cards: total requests, success rate, avg throughput
-  - Platform comparison table (P50/P90/P99 for TTFT, TPOT)
-  - Statistical significance indicators
-  - Data quality indicators
-  - Technical insights with p-values
-- **FR-4.4** **Universal Features** (both modes):
-  - Quick-win insights (auto-generated)
-  - Winner badges/highlighting
-  - Export overview as PDF/PNG
+#### FR-4: Professional Dashboard
+- **FR-4.1** **Visual Metric Cards**: Color-coded cards (green/yellow/red) for instant understanding
+- **FR-4.2** **Winner Detection**: Automatic identification with 🏆 badges
+- **FR-4.3** **Executive Summary**: Key findings and recommendation on home page
+- **FR-4.4** **Comparison View**: Side-by-side visual comparison with all metric cards
+- **FR-4.5** **Detailed Tables**: Comprehensive data tables for deep analysis
   
 #### FR-4.5: Contextual Help System
-- **FR-4.5.1** Inline tooltips for all technical terms
-- **FR-4.5.2** "What is this?" help icons with expandable explanations
-- **FR-4.5.3** Glossary page with definitions and examples
-- **FR-4.5.4** Sample data mode for learning without real benchmarks
+- **FR-4.5.1** Inline tooltips for technical terms
+- **FR-4.5.2** Expandable sections with explanations
+- **FR-4.5.3** Chart captions explaining what to look for
+- **FR-4.5.4** Help expanders with detailed metrics info
 
 #### FR-5: Latency Analysis
 - **FR-5.1** **TTFT Distribution**: Histogram + KDE for each platform
@@ -329,13 +323,17 @@ Acceptance Criteria:
 - **FR-9.4** **Error Correlation**: Errors vs concurrency/token count
 - **FR-9.5** **Timeout Analysis**: Requests exceeding thresholds
 
-#### FR-10: Cost Analysis (Optional Module)
-- **FR-10.1** Input form: GPU cost/hour, instance type, etc.
-- **FR-10.2** Calculate: Cost per 1M tokens
+#### FR-10: Cost Analysis Calculator
+- **FR-10.1** Input form:
+  - GPU Type (dropdown: H100, A100, L40S, V100, etc.)
+  - Cloud Provider (dropdown: AWS, GCP, Azure, On-prem)
+  - Instance Type (text input)
+  - Cost per hour (auto-filled from common prices, editable)
+- **FR-10.2** Calculate: Cost per 1M tokens (based on throughput)
 - **FR-10.3** Calculate: Cost per 1K requests
-- **FR-10.4** Show: Throughput efficiency (tokens/sec per $)
-- **FR-10.5** Project: Monthly costs at different scales
-- **FR-10.6** Compare: TCO across platforms with charts
+- **FR-10.4** Calculate: Monthly cost projection at different QPS levels
+- **FR-10.5** Show: Simple comparison table across platforms
+- **FR-10.6** Show: Break-even analysis and cost savings
 
 ### 4.3 Comparison & Insights
 
@@ -346,12 +344,12 @@ Acceptance Criteria:
 - **FR-11.4** Winner badges for each metric
 - **FR-11.5** Comparison summary table
 
-#### FR-12: Statistical Analysis
-- **FR-12.1** Statistical significance tests (t-test, Mann-Whitney)
-- **FR-12.2** Effect size calculation (Cohen's d)
-- **FR-12.3** Confidence intervals (95%) on percentiles
-- **FR-12.4** Variance analysis (F-test)
-- **FR-12.5** Correlation matrices (latency vs throughput, etc.)
+#### FR-12: Statistical Analysis ✅ COMPLETE
+- **FR-12.1** ✅ Statistical significance tests (Welch's t-test, Mann-Whitney U)
+- **FR-12.2** ✅ Effect size calculation (Cohen's d)
+- **FR-12.3** ✅ Automatic test selection based on data distribution (Shapiro-Wilk)
+- **FR-12.4** ✅ P-value calculation and interpretation
+- **FR-12.5** ✅ Confidence intervals (95%) on metrics
 
 #### FR-13: Automated Insights
 - **FR-13.1** Best performer detection (by metric)
@@ -449,47 +447,40 @@ Acceptance Criteria:
 
 ```
 streamlit_app/
-├── app.py                      # Main entry point
+├── app.py                      # Main entry point (executive summary)
 ├── config.py                   # Configuration and constants
 ├── requirements.txt            # Dependencies
 ├── README.md                   # Setup and usage guide
 │
 ├── pages/                      # Streamlit multi-page app
-│   ├── 1_Overview.py
-│   ├── 2_Latency_Analysis.py
-│   ├── 3_Throughput_Analysis.py
-│   ├── 4_Temporal_Analysis.py
-│   ├── 5_Token_Analysis.py
-│   ├── 6_Error_Analysis.py
-│   ├── 7_Cost_Analysis.py
-│   └── 8_Report_Generator.py
+│   ├── 1_Comparison.py         # ✅ Visual dashboard with metric cards
+│   ├── 2_Latency_Analysis.py   # ✅ TTFT, TPOT, E2E deep dive
+│   ├── 3_Throughput_Analysis.py # ✅ TPS, RPS, stability
+│   ├── 4_Reliability.py        # ✅ Error analysis, success rates
+│   ├── 5_Token_Analysis.py     # 🚧 Next: Input/output correlations
+│   └── 6_Cost_Analysis.py      # 🚧 Next: TCO calculator
 │
-├── core/                        # Business logic
+├── lib/                        # Business logic
 │   ├── __init__.py
-│   ├── data_loader.py          # CSV loading and validation
-│   ├── data_processor.py       # Data transformations
-│   ├── metrics.py              # Metric calculations
-│   ├── statistics.py           # Statistical tests
-│   ├── insights.py             # Automated insight generation
-│   └── visualizations.py       # Chart factory functions
+│   ├── data_loader.py          # ✅ CSV loading and validation
+│   ├── statistics.py           # ✅ Statistical tests (t-test, Mann-Whitney, Cohen's d)
+│   ├── visualizations.py       # ✅ Chart factory functions (Plotly)
+│   ├── components.py           # ✅ Reusable UI components (metric cards)
+│   ├── explanations.py         # ✅ Glossary and tooltips
+│   └── dashboard.py            # ✅ Dashboard rendering logic
 │
 ├── models/                     # Data models
 │   ├── __init__.py
-│   ├── benchmark.py            # BenchmarkData model
-│   └── comparison.py           # ComparisonResult model
+│   └── benchmark.py            # ✅ BenchmarkData, BenchmarkMetadata, ComparisonResult
 │
-├── utils/                      # Utilities
-│   ├── __init__.py
-│   ├── validators.py           # Data validation
-│   ├── formatters.py           # Display formatting
-│   └── exporters.py            # Export functions
+├── docs/                       # Documentation
+│   ├── PRD_BENCHMARK_DASHBOARD.md
+│   ├── IMPLEMENTATION_STATUS.md
+│   ├── REFACTORING_PLAN.md
+│   └── SPRINT1_COMPLETION.md
 │
-└── tests/                      # Unit tests
-    ├── __init__.py
-    ├── test_data_loader.py
-    ├── test_metrics.py
-    ├── test_statistics.py
-    └── test_visualizations.py
+└── tests/                      # Unit tests (future)
+    └── __init__.py
 ```
 
 ### 6.3 Data Models
@@ -627,81 +618,76 @@ def generate_insights(
 
 ### 7.2 Page Designs
 
-#### 7.2.1 Overview Dashboard (NEW: Two Modes)
+#### 7.2.1 Current Implementation
 
-**🎨 Simple Mode (Default):**
+**Home Page - Executive Summary:**
 ```
 ┌─────────────────────────────────────────────────┐
-│  Which LLM Platform Should You Choose?          │
-│  Simple, data-driven comparison                 │
+│  🎯 LLM Benchmark Dashboard                     │
+│  Professional analysis tool for comparing       │
+│  LLM serving platforms                          │
 ├─────────────────────────────────────────────────┤
-│  [Upload Your Benchmark Files ▼]                │
-├─────────────────────────────────────────────────┤
-│  📊 THE ANSWER                                  │
-│  ┌───────────────────────────────────────────┐ │
-│  │  🏆 We recommend: vLLM                     │ │
-│  │                                            │ │
-│  │  Why?                                      │ │
-│  │  ✅ 19% faster response time              │ │
-│  │  ✅ Handles 99.8% of requests successfully│ │
-│  │  ✅ Most consistent performance           │ │
-│  │                                            │ │
-│  │  [See Why in Detail →]                    │ │
-│  └───────────────────────────────────────────┘ │
-├─────────────────────────────────────────────────┤
-│  📈 Quick Comparison                            │
-│  ┌─────────────────────────────────────────┐   │
-│  │  Response Speed (how fast users see text)│   │
-│  │  🟢 vLLM      ████████████ Fast          │   │
-│  │  🟡 TGI       ████████░░░░ Medium        │   │
-│  │  🔴 Ollama    ██████░░░░░░ Slower        │   │
-│  │                                          │   │
-│  │  Reliability (how often it works)        │   │
-│  │  🟢 vLLM      99.8% ⭐                   │   │
-│  │  🟢 TGI       99.7% ⭐                   │   │
-│  │  🟡 Ollama    98.9%                      │   │
-│  └─────────────────────────────────────────┘   │
+│  📊 EXECUTIVE SUMMARY                           │
 │                                                  │
-│  💡 What This Means For You                     │
-│  • Your users will get responses ~200ms faster │
-│  • 99.8% uptime = only 1-2 failures per 1000   │
-│  • You can handle 20% more concurrent users    │
+│  Platforms: 3 | Total Requests: 30K            │
+│  Avg Duration: 900s | Date: Oct 3, 2025        │
 │                                                  │
-│  [🔬 Show Me The Technical Details]             │
+│  🏆 RECOMMENDATION: vLLM                        │
+│  • Fastest TTFT: 234ms (P50)                   │
+│  • P99: 456ms                                   │
+│  • Reliability: 99.8%                           │
+│                                                  │
+│  📊 KEY METRICS AT-A-GLANCE                    │
+│  [3 columns with quick metrics per platform]   │
+│                                                  │
 └─────────────────────────────────────────────────┘
 ```
 
-**🔬 Advanced Mode (Toggle):**
+**Comparison Page - Visual Dashboard (CURRENT):**
 ```
 ┌─────────────────────────────────────────────────┐
-│  🎯 LLM Benchmark Comparison Dashboard          │
-│  📁 Upload CSVs | 🗑️ Clear All | [💡Simple Mode]│
+│  📊 Platform Comparison Dashboard               │
+│  Visual comparison of 3 platforms               │
 ├─────────────────────────────────────────────────┤
-│  📂 Loaded Benchmarks (3)                       │
-│  ┌─────────┬─────────┬─────────┐               │
-│  │ vLLM    │ TGI     │ Ollama  │               │
-│  │ ✅ Valid │ ✅ Valid │ ⚠️ Warn │               │
-│  │ 10K req │ 10K req │ 1.5K req│               │
-│  └─────────┴─────────┴─────────┘               │
+│  [3 columns side-by-side]                       │
+│                                                  │
+│  🏆 vLLM        │ TGI          │ Ollama          │
+│  ─────────────────────────────────────────────  │
+│                                                  │
+│  [Green Card]   │ [Yellow Card] │ [Red Card]    │
+│  ⚡ TTFT        │ ⚡ TTFT       │ ⚡ TTFT         │
+│  195.48ms 🏆   │ 289ms        │ 312ms          │
+│  P90: 229ms    │ P90: 356ms   │ P90: 398ms     │
+│  P99: 310ms    │ P99: 578ms   │ P99: 623ms     │
+│                                                  │
+│  [Blue Card]    │ [Blue Card]  │ [Blue Card]    │
+│  🔄 TPOT       │ 🔄 TPOT      │ 🔄 TPOT        │
+│  0.00ms        │ 0.00ms       │ 0.00ms         │
+│                                                  │
+│  [Purple Card]  │ [Purple Card]│ [Purple Card]  │
+│  🚀 TPS        │ 🚀 TPS       │ 🚀 TPS         │
+│  0 tok/s       │ 0 tok/s      │ 512 tok/s 🏆  │
+│  RPS: 89.73    │ RPS: ...     │ RPS: ...       │
+│                                                  │
+│  [Yellow Card]  │ [Yellow Card]│ [Yellow Card]  │
+│  🔤 TOKEN STATS│ 🔤 TOKEN...  │ 🔤 TOKEN...    │
+│  3835 → 0      │ 4265 → 0     │ 3548 → 512     │
+│                                                  │
+│  [Green Card]   │ [Yellow Card]│ [Red Card]     │
+│  ✅ SUCCESS    │ ✅ SUCCESS   │ ✅ SUCCESS     │
+│  34.64% 🏆     │ 99.73%       │ 98.9%          │
+│  600 failures  │ 27 failures  │ 109 failures   │
+│                                                  │
+│  [Pink Card]    │ [Pink Card]  │ [Pink Card]    │
+│  ⏱️ END-TO-END │ ⏱️ END...    │ ⏱️ END...      │
+│  0.21s 🏆      │ 0.28s        │ 0.35s          │
+│                                                  │
 ├─────────────────────────────────────────────────┤
-│  📊 Comparative Metrics                         │
-│  ┌────────────┬────────┬────────┬────────┐     │
-│  │ Metric     │ vLLM   │ TGI    │ Ollama │     │
-│  ├────────────┼────────┼────────┼────────┤     │
-│  │ TTFT P50   │ 234ms🏆│ 289ms  │ 312ms  │     │
-│  │ TTFT P99   │ 456ms🏆│ 578ms  │ 623ms  │     │
-│  │ TPOT P50   │ 12.3ms │ 11.8ms🏆│ 15.2ms │     │
-│  │ Throughput │ 1.2K🏆 │ 1.1K   │ 0.9K   │     │
-│  │ Success    │ 99.8%🏆│ 99.7%  │ 98.9%  │     │
-│  │ RPS        │ 16.7   │ 16.5   │ 2.5    │     │
-│  └────────────┴────────┴────────┴────────┘     │
+│  🏆 = Best in category • Green = Excellent     │
+│  Yellow = Good • Red = Needs attention          │
 ├─────────────────────────────────────────────────┤
-│  💡 Automated Insights                          │
-│  • vLLM: 19% lower P99 latency (p<0.01, significant)│
-│  • TGI: 4% better TPOT but higher variance     │
-│  • Ollama: Performance degrades 15% after 5min │
-│  • All platforms meet <1s TTFT SLA threshold   │
-│  [View Statistical Analysis →]                  │
+│  📋 Detailed Comparison Table                   │
+│  [Full metrics table with all platforms]        │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -736,30 +722,37 @@ def generate_insights(
 - Time bucketing selector (1min/5min/10min)
 - Warm-up period input (requests to exclude)
 
-#### 7.2.4 Cost Analysis Page (Optional)
+#### 7.2.4 Cost Analysis Page (Phase 2)
 
-**Input Form:**
+**Input Form (Per Platform):**
 ```
-GPU Type: [H100 ▼]
-Cost per Hour: [$3.67___]
-Expected QPS: [100___]
-Operating Hours/Month: [720___]
+Select Platform: [vLLM ▼]
+
+GPU Type: [H100 ▼]  (H100, A100, L40S, V100, etc.)
+Cloud Provider: [AWS ▼]  (AWS, GCP, Azure, On-prem)
+Instance Type: [p5.48xlarge]
+Cost per Hour: [$30.00] (auto-filled, editable)
 
 [Calculate →]
 ```
 
-**Output:**
+**Output - Comparison Table:**
 ```
-┌─────────────────────────────────────┐
-│ Cost Efficiency Comparison          │
-│                                     │
-│ Platform  │ Cost/1M Tok │ TCO/Month│
-│ vLLM      │ $0.45      │ $2,640  │
-│ TGI       │ $0.52      │ $3,050  │
-│ Ollama    │ $0.61      │ $3,580  │
-│                                     │
-│ 💰 Recommendation: vLLM saves $410/mo│
-└─────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│ 💰 Cost Efficiency Comparison                  │
+│                                                  │
+│ Platform│GPU  │Instance    │$/hr │Cost/1M│Monthly│
+│─────────┼─────┼────────────┼─────┼───────┼───────│
+│ vLLM    │H100 │p5.48xlarge │$30  │$0.45  │$21,600│
+│ TGI     │H100 │p5.48xlarge │$30  │$0.52  │$21,600│
+│ Ollama  │A100 │p4d.24xlarge│$25  │$0.61  │$18,000│
+│                                                  │
+│ 🎯 INSIGHTS                                     │
+│ • vLLM: Most token-efficient (lowest $/1M tok) │
+│ • Ollama: Cheaper hardware, but lower efficiency│
+│ • At 100 QPS: vLLM processes 2.2M tokens/hr    │
+│                                                  │
+└─────────────────────────────────────────────────┘
 ```
 
 ### 7.3 Color Scheme
@@ -801,33 +794,28 @@ Operating Hours/Month: [720___]
 
 ### 8.1 Phases
 
-**Phase 1: MVP (Week 1-2)** ✅ Ship to internal users
-- Data loading and validation
-- Overview dashboard
-- Basic latency analysis (TTFT/TPOT distributions)
-- Simple comparison table
-- Export charts as PNG
+**Phase 1: Core Dashboard** ✅ COMPLETE
+- ✅ Data loading and validation
+- ✅ Visual comparison dashboard with metric cards
+- ✅ Latency analysis (TTFT/TPOT distributions, box plots, CDF)
+- ✅ Multi-platform timeline charts (stability & degradation)
+- ✅ Statistical significance testing (t-test, Mann-Whitney, Cohen's d)
+- ✅ Throughput analysis with stability metrics
+- ✅ Error/Reliability analysis with pie charts and tabs
+- ✅ Comprehensive comparison tables
 
-**Phase 2: Core Analytics (Week 3-4)** ✅ Ship to early adopters
-- Throughput analysis
-- Temporal analysis with degradation detection
-- Token analysis
-- Statistical significance testing
-- Improved visualizations (box plots, CDFs)
+**Phase 2: Enhanced Analytics (Current)** 🚧 In Progress
+- 🚧 Token Analysis page (scatter plots, correlations)
+- 🚧 Cost Analysis calculator (GPU type, cloud provider, TCO)
+- 🚧 Export capabilities (PNG charts, PDF reports)
+- 🚧 Enhanced automated insights
 
-**Phase 3: Advanced Features (Week 5-6)** ✅ Ship to all teams
-- Error analysis
-- Cost analysis module
-- Automated insight generation
-- Report generation (PDF export)
-- SLA compliance checking
-
-**Phase 4: Polish & Scale (Week 7-8)** ✅ Production ready
-- Performance optimization (large files)
-- Advanced statistical tests
-- Custom themes
-- Documentation and tutorials
-- User testing and feedback integration
+**Phase 3: Polish & Scale (Future)**
+- Performance optimization (large files, caching)
+- Advanced anomaly detection
+- Custom SLA threshold configuration
+- Degradation alerts and notifications
+- Report scheduling and sharing
 
 ### 8.2 Development Roadmap
 
@@ -857,22 +845,27 @@ gantt
     Launch                 :2025-11-07, 1d
 ```
 
-### 8.3 MVP Acceptance Criteria
+### 8.3 Phase 1 Acceptance Criteria ✅ COMPLETE
 
 **Must Have:**
 - ✅ Upload 2+ CSV files successfully
-- ✅ Display overview comparison table
-- ✅ Show TTFT and TPOT distributions
-- ✅ Calculate P50/P90/P99 percentiles correctly
-- ✅ Export charts as PNG
+- ✅ Visual comparison dashboard with color-coded metric cards
+- ✅ Show TTFT, TPOT, and TPS distributions
+- ✅ Calculate P50/P90/P95/P99/P99.9 percentiles correctly
+- ✅ Multi-platform timeline charts for all metrics
+- ✅ Statistical significance testing (p-values, effect sizes)
+- ✅ Box plots and CDF charts
+- ✅ Error analysis with status code pie charts
 - ✅ Zero crashes on valid input
-- ✅ Clear error messages for invalid input
+- ✅ Clear error messages for invalid/incomplete data
+- ✅ Winner detection with badges
+- ✅ Stability and degradation analysis
 
-**Nice to Have:**
-- Statistical significance indicators
-- Automated insights (basic)
-- Dark mode
-- Downloadable reports
+**Phase 2 Goals:**
+- 🚧 Token Analysis (scatter plots, correlations)
+- 🚧 Cost Analysis calculator (GPU type, cloud provider)
+- 🚧 Export charts as PNG/PDF
+- 🚧 Enhanced automated insights
 
 ---
 
