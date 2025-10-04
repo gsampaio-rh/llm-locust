@@ -82,3 +82,34 @@ DEFAULT_TTFT_P50_THRESHOLD_MS: Final[float] = 1000.0  # 1 second
 DEFAULT_TTFT_P99_THRESHOLD_MS: Final[float] = 2000.0  # 2 seconds
 DEFAULT_SUCCESS_RATE_THRESHOLD: Final[float] = 0.999  # 99.9%
 
+# GPU and Cloud Pricing (approximate, as of Oct 2025)
+GPU_PRICING: Final[dict[str, dict[str, float]]] = {
+    "AWS": {
+        "H100": 30.00,  # p5.48xlarge (8x H100)
+        "A100": 10.24,  # p4d.24xlarge (8x A100)
+        "A10G": 1.21,   # g5.xlarge (1x A10G)
+        "L40S": 12.00,  # Estimated
+        "V100": 3.06,   # p3.2xlarge (1x V100)
+    },
+    "GCP": {
+        "H100": 29.39,  # a3-highgpu-8g (8x H100)
+        "A100": 9.74,   # a2-highgpu-1g (1x A100)
+        "L4": 0.79,     # g2-standard-4 (1x L4)
+        "V100": 2.48,   # n1-standard-8 with V100
+    },
+    "Azure": {
+        "H100": 27.20,  # ND_H100_v5
+        "A100": 8.91,   # Standard_ND96amsr_A100_v4
+        "V100": 2.95,   # Standard_NC6s_v3
+    },
+    "On-prem": {
+        "H100": 15.00,  # Amortized cost estimate
+        "A100": 8.00,
+        "L40S": 10.00,
+        "V100": 2.00,
+    },
+}
+
+GPU_TYPES: Final[list[str]] = ["H100", "A100", "L40S", "L4", "A10G", "V100"]
+CLOUD_PROVIDERS: Final[list[str]] = ["AWS", "GCP", "Azure", "On-prem"]
+
