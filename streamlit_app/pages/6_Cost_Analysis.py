@@ -14,6 +14,7 @@ import streamlit as st
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from config import INSTANCE_CONFIGS
+from lib.yaml_parser import parse_all_yamls_in_directory
 
 st.set_page_config(page_title="Cost Analysis", page_icon="💰", layout="wide")
 
@@ -29,18 +30,109 @@ st.caption("Calculate and compare Total Cost of Ownership (TCO) across platforms
 
 st.markdown("---")
 
+# ============= YAML AUTO-LOAD SECTION =============
+st.subheader("📄 Auto-Load from Deployment YAMLs")
+
+# Check if deployment YAMLs exist
+configs_dir = Path(__file__).parent.parent.parent / "configs" / "engines"
+yaml_configs_available = configs_dir.exists() and any(configs_dir.glob("*.yaml"))
+
+if yaml_configs_available:
+    if st.button("🔄 Load Instance Specs from Deployment YAMLs", type="primary"):
+        with st.spinner("Parsing deployment YAMLs..."):
+            yaml_configs = parse_all_yamls_in_directory(configs_dir)
+            
+            if yaml_configs:
+                # Auto-populate cost configs from YAML
+                if "yaml_loaded_configs" not in st.session_state:
+                    st.session_state["yaml_loaded_configs"] = {}
+                
+                for platform_name, yaml_config in yaml_configs.items():
+                    # Store the parsed config (just for reference)
+                    st.session_state["yaml_loaded_configs"][platform_name] = yaml_config
+                
+                st.success(f"✅ Loaded {len(yaml_configs)} deployment config(s) from YAMLs!")
+                st.rerun()
+            else:
+                st.error("❌ No valid deployment YAMLs found in configs/engines/")
+    
+    # Show what was loaded
+    if "yaml_loaded_configs" in st.session_state and st.session_state["yaml_loaded_configs"]:
+        with st.expander("📋 View Parsed Deployment Specs (from YAMLs)", expanded=True):
+            st.caption("These specs were extracted from your deployment YAMLs. Select instance type below to set GPU type and pricing.")
+            
+            # Show platform name mapping debug info
+            st.info(f"🔍 **Debug**: Found {len(st.session_state['yaml_loaded_configs'])} YAML config(s): {', '.join(st.session_state['yaml_loaded_configs'].keys())}")
+            if benchmarks:
+                benchmark_platforms = [b.metadata.platform for b in benchmarks]
+                st.info(f"🔍 **Debug**: Benchmark platforms: {', '.join(benchmark_platforms)}")
+            
+            st.markdown("---")
+            for platform_name, yaml_config in st.session_state["yaml_loaded_configs"].items():
+                st.markdown(f"**{platform_name}** (from YAML)")
+                col1, col2, col3, col4, col5 = st.columns(5)
+                with col1:
+                    st.metric("GPU Count", yaml_config.gpu_count)
+                with col2:
+                    st.metric("CPU Cores", yaml_config.cpu_cores)
+                with col3:
+                    st.metric("Memory", yaml_config.memory_gi)
+                with col4:
+                    st.metric("Replicas", yaml_config.replicas)
+                with col5:
+                    if yaml_config.gpu_memory_utilization:
+                        st.metric("GPU Util", f"{yaml_config.gpu_memory_utilization:.0%}")
+                    else:
+                        st.metric("GPU Util", "N/A")
+                
+                if yaml_config.model_name:
+                    st.caption(f"📦 Model: `{yaml_config.model_name}`")
+                
+                if yaml_config.gpu_memory_utilization:
+                    packing = 1 / yaml_config.gpu_memory_utilization
+                    st.caption(f"💡 Theoretical packing: {packing:.2f}x models per GPU")
+                
+                st.markdown("---")
+else:
+    st.info(f"💡 **Tip:** Place your deployment YAMLs in `configs/engines/` directory to auto-load instance specifications!")
+
+st.markdown("---")
+
 # ============= COST INPUT SECTION =============
+st.subheader("⚙️ Cost Calculation Settings")
+
+# Cost allocation mode
+allocation_mode = st.radio(
+    "Cost Allocation Mode",
+    options=["Proportional (GPU Memory Utilization)", "Full Instance Cost"],
+    help="""
+    **Proportional**: Allocate cost based on actual GPU memory used (from --gpu-memory-utilization).
+    Example: If using 60% of GPU memory, cost = (Instance cost / GPUs) × 0.60
+    
+    **Full Instance Cost**: Charge full instance cost regardless of utilization.
+    Use this if you have dedicated nodes for each deployment.
+    """,
+    horizontal=True,
+)
+
+use_proportional = allocation_mode.startswith("Proportional")
+
+st.markdown("---")
+
 st.subheader("⚙️ Select Instance Type")
 st.caption("Just pick your machine - pricing auto-fills!")
 
 # Initialize session state for cost config
 if "cost_config" not in st.session_state:
     st.session_state["cost_config"] = {}
-    # Default to first instance config for each platform
-    default_instance = list(INSTANCE_CONFIGS.keys())[0]
-    for benchmark in benchmarks:
+
+# Ensure all current benchmark platforms have cost config entries
+default_instance = list(INSTANCE_CONFIGS.keys())[0]
+for benchmark in benchmarks:
+    platform = benchmark.metadata.platform
+    if platform not in st.session_state["cost_config"]:
         config = INSTANCE_CONFIGS[default_instance]
-        st.session_state["cost_config"][benchmark.metadata.platform] = {
+        st.session_state["cost_config"][platform] = {
             "instance_name": default_instance,
             "gpu_type": config["gpu"],
             "gpu_count": config["gpu_count"],
@@ -148,9 +240,43 @@ for benchmark in benchmarks:
     
     # Get throughput metrics
     throughput_avg = benchmark.throughput_avg  # tokens/sec
-    cost_per_hour = config["cost_per_hour"]
+    base_cost_per_hour = config["cost_per_hour"]
     gpu_type = config["gpu_type"]
-    gpu_count = config.get("gpu_count", 1)
+    instance_gpu_count = config.get("gpu_count", 1)
+    
+    # Check if we have YAML config for this platform
+    # Normalize platform name for matching (case-insensitive)
+    yaml_config = None
+    if "yaml_loaded_configs" in st.session_state:
+        # Try exact match first
+        yaml_config = st.session_state["yaml_loaded_configs"].get(platform)
+        
+        # If not found, try case-insensitive match
+        if not yaml_config:
+            for yaml_platform, yaml_cfg in st.session_state["yaml_loaded_configs"].items():
+                if yaml_platform.lower() == platform.lower():
+                    yaml_config = yaml_cfg
+                    break
+    
+    # Calculate actual cost based on allocation mode
+    if use_proportional and yaml_config and yaml_config.gpu_memory_utilization:
+        # Proportional allocation: cost per GPU × GPU util × replicas
+        cost_per_gpu = base_cost_per_hour / instance_gpu_count
+        gpu_util = yaml_config.gpu_memory_utilization
+        deployment_gpu_count = yaml_config.gpu_count
+        replicas = yaml_config.replicas
+        
+        cost_per_hour = cost_per_gpu * gpu_util * deployment_gpu_count * replicas
+        cost_note = f"({deployment_gpu_count} GPU × {gpu_util:.0%} util × {replicas} replica)"
+    else:
+        # Full instance cost
+        cost_per_hour = base_cost_per_hour
+        if yaml_config:
+            replicas = yaml_config.replicas
+            cost_per_hour = base_cost_per_hour * replicas
+            cost_note = f"({replicas} replica × full instance)"
+        else:
+            cost_note = "(full instance cost)"
     
     if throughput_avg > 0:
         # Calculate costs
@@ -174,9 +300,10 @@ for benchmark in benchmarks:
         cost_results.append({
             "Platform": platform,
             "Instance": config["instance_name"],
-            "GPUs": f"{gpu_count}x {gpu_type}",
+            "GPUs": f"{instance_gpu_count}x {gpu_type}",
             "Provider": config["cloud_provider"],
             "$/Hour": f"${cost_per_hour:.2f}",
+            "Cost Note": cost_note,
             "$/1M Tokens": f"${cost_per_million_tokens:.2f}",
             "$/1K Requests": f"${cost_per_1k_requests:.3f}",
             "Tokens per $": f"{tokens_per_dollar:,.0f}",
@@ -185,9 +312,10 @@ for benchmark in benchmarks:
         cost_results.append({
             "Platform": platform,
             "Instance": config["instance_name"],
-            "GPUs": f"{gpu_count}x {gpu_type}",
+            "GPUs": f"{instance_gpu_count}x {gpu_type}",
             "Provider": config["cloud_provider"],
             "$/Hour": f"${cost_per_hour:.2f}",
+            "Cost Note": cost_note if 'cost_note' in locals() else "(full instance)",
             "$/1M Tokens": "N/A (zero throughput)",
             "$/1K Requests": "N/A",
             "Tokens per $": "N/A",

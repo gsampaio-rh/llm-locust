@@ -1,0 +1,47 @@
+---
+# Ollama Deployment
+# Last Updated: 2025-10-04
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ollama-test
+  labels:
+    app: ollama
+    version: "0.3.12"
+
+spec:
+  replicas: 1
+  
+  selector:
+    matchLabels:
+      app: ollama
+  
+  template:
+    metadata:
+      labels:
+        app: ollama
+        version: "0.3.12"
+    
+    spec:
+      containers:
+      - name: ollama
+        image: docker.io/ollama/ollama:0.3.12
+        
+        # Resources - Used by cost analysis
+        resources:
+          requests:
+            cpu: "2"
+            memory: 16Gi
+            nvidia.com/gpu: "1"
+          limits:
+            cpu: "4"
+            memory: 24Gi
+            nvidia.com/gpu: "1"
+        
+        # Note: Ollama doesn't expose model in args
+        # Model: qwen2.5:7b-instruct-fp16 (pulled via init container)
+        
+        ports:
+          - name: http
+            containerPort: 11434

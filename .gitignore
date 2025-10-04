@@ -94,3 +94,6 @@ Thumbs.db
 
 # Ruff cache
 .ruff_cache/
+
+# Internal workspace (completely git-ignored)
+tmp/

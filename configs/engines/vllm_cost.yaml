@@ -1,0 +1,57 @@
+---
+# vLLM Deployment - Cost-Optimized Configuration
+# GPU Memory Utilization: 60% (cost savings, better packing)
+# Last Updated: 2025-10-04
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-cost
+  labels:
+    app: vllm
+    variant: cost-optimized
+    version: "0.6.3"
+
+spec:
+  replicas: 1
+  
+  selector:
+    matchLabels:
+      app: vllm
+      variant: cost-optimized
+  
+  template:
+    metadata:
+      labels:
+        app: vllm
+        variant: cost-optimized
+        version: "0.6.3"
+    
+    spec:
+      containers:
+      - name: vllm
+        image: docker.io/vllm/vllm-openai:v0.6.3
+        
+        # Resources - Used by cost analysis
+        resources:
+          requests:
+            cpu: "2"
+            memory: 12Gi
+            nvidia.com/gpu: "1"
+          limits:
+            cpu: "4"
+            memory: 20Gi
+            nvidia.com/gpu: "1"
+        
+        # Configuration - Model and GPU utilization extracted
+        args:
+          - "--model=RedHatAI/Qwen2.5-VL-7B-Instruct-FP8-dynamic"
+          - "--port=8000"
+          - "--host=0.0.0.0"
+          - "--gpu-memory-utilization=0.60"
+          - "--max-model-len=4096"
+          - "--enable-prefix-caching"
+        
+        ports:
+          - name: http
+            containerPort: 8000

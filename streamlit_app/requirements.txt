@@ -23,3 +23,6 @@ pydantic>=2.5.0
 # Utilities
 python-dateutil>=2.8.2
 
+# YAML parsing for deployment configs
+pyyaml>=6.0.0
+

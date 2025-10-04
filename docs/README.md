@@ -10,22 +10,6 @@ Welcome to the LLM Locust documentation! This directory contains comprehensive g
 
 ### Core Documentation
 
-#### [Datasets Guide](DATASETS.md)
-Guide to supported prompt datasets and how to use them.
-
-**Topics covered:**
-- Databricks Dolly 15k
-- ShareGPT conversational dataset
-- Custom dataset loading
-- Dataset selection for different use cases
-- Caching and performance
-
-**Read this if you want to:**
-- Choose the right dataset for your test
-- Load ShareGPT or custom datasets
-- Mix multiple datasets
-- Understand dataset characteristics
-
 #### [Architecture Guide](ARCHITECTURE.md)
 Detailed explanation of the system design, components, and communication patterns.
 
@@ -33,12 +17,15 @@ Detailed explanation of the system design, components, and communication pattern
 - Multi-process architecture
 - AsyncIO concurrency model
 - Metrics pipeline
+- **Dataset architecture** (Dolly, ShareGPT, BillSum, Custom)
 - Extension points
 - Performance characteristics
 - Best practices
 
 **Read this if you want to:**
 - Understand how the system works internally
+- Choose the right dataset for your test
+- Load and mix datasets
 - Extend the framework with custom components
 - Debug performance issues
 - Contribute to the codebase
@@ -77,34 +64,36 @@ Complete guide to running standardized benchmark tests with examples and analysi
 - Analyze benchmark results
 - Customize benchmarks for your needs
 
-#### [Benchmark Specifications](TESTS.md)
-Detailed technical specifications for each benchmark test.
+#### [Changelog](CHANGELOG.md)
+Complete version history, feature additions, and refactoring details.
 
 **Topics covered:**
-- Chat Simulation (Test 1a) - 256/128 tokens
-- RAG Simulation (Test 1b) - 4096/512 tokens
-- Code Generation (Test 1c) - 512/512 tokens
-- Constant Rate Testing (Test 2a)
-- Poisson Rate Testing (Test 2b)
-
-**Read this if you want to:**
-- Understand benchmark requirements and objectives
-- Design custom benchmarks based on specs
-- Compare against industry standards
-
-#### [Refactoring Summary](REFACTORING_SUMMARY.md)
-Complete history of changes from the original repository.
-
-**Topics covered:**
-- What was removed (WebUI)
-- What was reorganized (package structure)
-- What was improved (type safety, error handling)
+- Recent changes and features (Unreleased, v0.2.0)
+- YAML cost integration feature
+- Failed request tracking fix
+- Historical refactoring (v0.1.0)
 - Migration guide for existing users
 
-**Read this if you:**
-- Are familiar with the original llm-locust
-- Want to understand the changes
-- Need to migrate existing code
+**Read this if you want to:**
+- See what's changed in each version
+- Understand new features like YAML cost integration
+- Migrate from older versions
+- Track project evolution
+
+#### [Interactive CLI Plan](AGILE_PLAN_INTERACTIVE_CLI.md)
+Future roadmap for interactive "racing" CLI with live TUI.
+
+**Topics covered:**
+- "The Great Model Race" concept
+- 4-sprint agile plan (8 weeks)
+- 27 user stories with acceptance criteria
+- Live request/response inspector
+- Achievements, replays, and sharing
+
+**Read this if you want to:**
+- See future direction of the project
+- Contribute to interactive CLI development
+- Understand the product vision
 
 ---
 
@@ -116,10 +105,10 @@ Complete history of changes from the original repository.
 → Start with [Main README](../README.md) and [examples/simple_test.py](../examples/simple_test.py)
 
 **I want to run standardized benchmarks:**
-→ See [Benchmark Specifications](TESTS.md) and [Benchmark Guide](BENCHMARKS.md)
+→ See [Benchmark Guide](BENCHMARKS.md) (includes all specifications)
 
 **I want to understand the metrics:**
-→ Read [Metrics Guide](METRICS_GUIDE.md)
+→ Read [Metrics Coverage](METRICS_COVERAGE.md) and [Architecture](ARCHITECTURE.md)
 
 **I want to add custom metrics:**
 → See [Architecture Guide](ARCHITECTURE.md) → Extension Points
@@ -131,7 +120,7 @@ Complete history of changes from the original repository.
 → Read [Architecture Guide](ARCHITECTURE.md)
 
 **I'm migrating from the original:**
-→ Read [Refactoring Summary](REFACTORING_SUMMARY.md)
+→ Read [Changelog](CHANGELOG.md) → Historical Context section
 
 ---
 

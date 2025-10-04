@@ -66,8 +66,8 @@ TARGET_OUTPUT_TOKENS = 512
 DEFAULT_DURATION = 900  # 15 minutes
 DEFAULT_USERS = 20
 DEFAULT_SPAWN_RATE = 2.0  # Users per second (slower than Test 1a due to larger context)
-INPUT_TOKEN_MIN = 800   # Adjusted for servers with 1024 max input tokens
-INPUT_TOKEN_MAX = 950   # Safely below 1024 limit, leaves room for 512 output tokens
+INPUT_TOKEN_MIN = 1500   # Adjusted for servers with 1024 max input tokens
+INPUT_TOKEN_MAX = 2000   # Safely below 1024 limit, leaves room for 512 output tokens
 
 # Per-request logging defaults
 LOG_TO_CONSOLE = True

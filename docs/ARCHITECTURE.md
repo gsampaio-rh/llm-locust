@@ -217,6 +217,237 @@ Add functions to `llm_locust/utils/prompts.py`:
 def load_custom_source(tokenizer, ...) -> list[dict]: ...
 ```
 
+---
+
+## Dataset Architecture
+
+### Overview
+
+LLM Locust supports multiple prompt datasets for different testing scenarios. Datasets are a critical component of the architecture, providing realistic workload patterns.
+
+### Supported Datasets
+
+| Dataset | Type | Use Case | Input Range | Ideal For |
+|---------|------|----------|-------------|-----------|
+| **Dolly** | Q&A | General benchmarking | 100-500 | Baseline tests |
+| **ShareGPT** | Chat | Conversational | 50-2048 | Chat models |
+| **BillSum** | Summarization | Long context prefill | 1024-8192 | Prefill-heavy tests |
+| **Custom** | Any | Domain-specific | Variable | Specific use cases |
+
+### 1. Databricks Dolly 15k (Default)
+
+**Type**: Instruction-following  
+**Size**: ~15,000 prompts  
+**Use Case**: General-purpose Q&A, instruction following  
+**Format**: JSONL with context + instruction
+
+**Source**: [Databricks Dolly 15k](https://huggingface.co/datasets/databricks/databricks-dolly-15k)
+
+**Characteristics:**
+- Diverse instruction types
+- Variable prompt lengths
+- Context + instruction format
+- Good for general benchmarking
+
+**Usage:**
+```python
+from llm_locust.utils import load_databricks_dolly
+
+prompts = load_databricks_dolly(
+    tokenizer,
+    min_input_length=100,
+    max_input_length=500,
+)
+```
+
+### 2. ShareGPT
+
+**Type**: Conversational  
+**Size**: ~90,000 conversations  
+**Use Case**: Chat applications, multi-turn conversations  
+**Format**: Multi-turn conversations
+
+**Source**: [ShareGPT Vicuna Unfiltered](https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered)
+
+**Characteristics:**
+- Real user conversations
+- Natural language patterns
+- Multi-turn context (we use first user message)
+- Good for chat model benchmarking
+
+**Usage:**
+```python
+from llm_locust.utils import load_sharegpt
+
+prompts = load_sharegpt(
+    tokenizer,
+    min_input_length=50,
+    max_input_length=2048,
+    num_samples=1000,
+)
+```
+
+**Format Example:**
+```json
+{
+  "conversations": [
+    {"from": "human", "value": "How do I learn Python?"},
+    {"from": "gpt", "value": "Here are some steps..."},
+    {"from": "human", "value": "What about advanced topics?"}
+  ]
+}
+```
+
+### 3. BillSum
+
+**Type**: Long Document Summarization  
+**Size**: ~23,000 bills  
+**Use Case**: Long context prefill testing (heavy input processing)  
+**Format**: US legislative bills
+
+**Source**: [BillSum](https://huggingface.co/datasets/FiscalNote/billsum)
+
+**Characteristics:**
+- Very long documents (2k-10k tokens)
+- Complex legislative text
+- **Prefill-heavy** workload
+- Tests long context handling
+- Ideal for testing prompt processing performance
+
+**Usage:**
+```python
+from llm_locust.utils import load_billsum
+
+prompts = load_billsum(
+    tokenizer,
+    min_input_length=1500,
+    max_input_length=2000,
+    num_samples=500,
+)
+```
+
+**Prompt Format:**
+```
+Summarize this legislative bill:
+
+[Very long bill text...]
+```
+
+### 4. Custom Datasets
+
+**Type**: User-provided  
+**Use Case**: Domain-specific testing
+
+**Supported Formats:**
+
+**JSONL (recommended):**
+```json
+{"prompt": "Your prompt here"}
+{"prompt": "Another prompt"}
+```
+
+**JSON Array:**
+```json
+[
+  {"prompt": "Your prompt here"},
+  {"prompt": "Another prompt"}
+]
+```
+
+**Usage:**
+```python
+from llm_locust.utils import load_custom_prompts
+from pathlib import Path
+
+prompts = load_custom_prompts(
+    tokenizer=tokenizer,
+    prompts_file=Path("my_prompts.jsonl"),
+)
+```
+
+### Dataset Selection Guide
+
+**For General Benchmarking:**
+→ Use **Dolly** (default)
+- Well-balanced prompt distribution
+- Good mix of lengths
+- Instruction-following focus
+
+**For Chat Applications:**
+→ Use **ShareGPT**
+- Real conversational patterns
+- Natural language flow
+- Chat-style interactions
+
+**For Long Context (RAG) Testing:**
+→ Use **BillSum**
+- Very long input documents (2k-8k tokens)
+- Tests prompt processing performance
+- Heavy prefill workload
+- Reveals prefill bottlenecks
+
+**For Domain-Specific Testing:**
+→ Use **Custom dataset**
+- Your own prompts
+- Domain-specific vocabulary
+- Controlled test scenarios
+
+### Caching
+
+Datasets are automatically cached on first download:
+
+- **Dolly**: `datasets/databricks-dolly-15k.jsonl`
+- **ShareGPT**: `datasets/sharegpt.jsonl`
+- **BillSum**: `datasets/billsum.jsonl`
+
+All cache files are gitignored. Delete to force re-download.
+
+### Performance Characteristics
+
+| Dataset | Load Time | Memory | Cache Size |
+|---------|-----------|--------|------------|
+| Dolly | ~5s | ~50MB | ~13MB |
+| ShareGPT | ~30s | ~200MB | ~150MB |
+| BillSum | ~60s | ~300MB | ~250MB |
+| Custom | Varies | Varies | Varies |
+
+**Note**: First load includes download time. Subsequent loads use cached files.
+
+### Advanced Usage
+
+**Mix Multiple Datasets:**
+```python
+from llm_locust.utils import load_databricks_dolly, load_sharegpt
+
+# Load both datasets
+dolly = load_databricks_dolly(tokenizer, 100, 500)
+sharegpt = load_sharegpt(tokenizer, 100, 500)
+
+# Combine
+all_prompts = dolly + sharegpt
+
+# Use in client
+client = OpenAIChatStreamingClient(
+    base_url=host,
+    prompts=all_prompts,
+    ...
+)
+```
+
+**Filter by Length:**
+```python
+# Short prompts (chat-like)
+short = load_sharegpt(tokenizer, min_input_length=10, max_input_length=100)
+
+# Medium prompts (Q&A)
+medium = load_dolly(tokenizer, min_input_length=100, max_input_length=500)
+
+# Long prompts (document analysis)
+long = load_billsum(tokenizer, min_input_length=1500, max_input_length=2000)
+```
+
+---
+
 ## Best Practices
 
 1. **User Count**: Start with 10-20 users, scale up gradually

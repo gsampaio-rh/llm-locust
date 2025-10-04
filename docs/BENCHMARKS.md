@@ -1,34 +1,58 @@
 # LLM Locust Benchmarks
 
-This directory contains standardized benchmark tests for evaluating LLM inference endpoint performance under various workload conditions.
+This document contains standardized benchmark tests for evaluating LLM inference endpoint performance under various workload conditions.
 
-## Available Benchmarks
+## Overview
 
-### ✅ Test 1a: Chat Simulation
+LLM Locust provides 5 standardized benchmark tests that cover different real-world workloads:
+
+| Test ID | Name | Input/Output | Concurrency | Duration | Focus |
+|---------|------|--------------|-------------|----------|-------|
+| **1a** | Chat Simulation | 256/128 tokens | 50 users | 10 min | Interactive responsiveness |
+| **1b** | RAG Simulation | 4096/512 tokens | 20 users | 15 min | Large context processing |
+| **1c** | Code Generation | 512/512 tokens | 30 users | 10 min | Balanced workload |
+| **2a** | Constant Rate | 512/256 tokens | 40 users | 20 min | Sustained reliability |
+| **2b** | Poisson Rate | 512/256 tokens | Variable | 15 min | Burst handling |
+
+---
+
+## Benchmark Specifications
+
+### ✅ Test 1a: Chat Simulation (256 input / 128 output tokens)
+
 **File:** `examples/benchmark_chat_simulation.py`
 
-**Objective:** Evaluate system performance under short, interactive workloads representative of conversational AI.
+#### Objective
+Evaluate system performance under short, interactive workloads representative of conversational AI.
 
-**Workload Profile:**
+#### Workload Profile
 - **Input tokens:** ~256 per request
 - **Output tokens:** ~128 per request
-- **Interaction type:** Compact prompts and concise responses
-- **Duration:** 10 minutes (default)
-- **Concurrency:** 50 parallel chat sessions (default)
-- **Rate:** Steady conversational pace (1-2 requests per user per minute)
+- **Interaction type:** Compact prompts and concise responses, mimicking natural back-and-forth dialogue
+- **Dataset:** ShareGPT (conversational, fixed at benchmark level)
 
-**Success Criteria:**
-- TTFT median < 1 second
-- TTFT p99 < 2 seconds
-- Sustained throughput across all sessions
-- No latency degradation over time
+#### Test Parameters
+- **Duration:** 5–10 minutes (default: 10 minutes)
+  - Long enough to measure stability and response consistency
+- **Concurrency:** ~50 parallel chat sessions (default: 50 users)
+- **Rate:** Steady conversational pace (1–2 requests per user per minute)
+- **Number of Users Simulated:** Dozens of customer or assistant interactions in parallel
 
-**Use Cases:**
-Customer-facing assistants, support bots, copilots where responsiveness is critical.
+#### Benchmark Focus
+- **Latency Sensitivity:** Time-to-first-token (TTFT) and p99 latency as indicators of responsiveness
+- **Throughput:** Ability to sustain dozens of interactive conversations simultaneously
+- **User Experience Impact:** Ensures responses remain conversational
 
-**Dataset:** ShareGPT (conversational, fixed at benchmark level)
+#### Success Criteria
+- ✅ TTFT median < 1 second
+- ✅ TTFT p99 < 2 seconds
+- ✅ Sustained throughput across all sessions
+- ✅ No latency degradation over time
 
-**Run:**
+#### Business Context
+Customer-facing assistants, support bots, or copilots where responsiveness is critical for usability and adoption.
+
+#### Run Example
 ```bash
 python examples/benchmark_chat_simulation.py \
     --host https://your-llm-endpoint.com \
@@ -39,31 +63,41 @@ python examples/benchmark_chat_simulation.py \
 
 ---
 
-### ✅ Test 1b: RAG Simulation
+### ✅ Test 1b: RAG Simulation (4096 input / 512 output tokens)
+
 **File:** `examples/benchmark_rag_simulation.py`
 
-**Objective:** Assess performance when handling large input contexts and longer responses typical of retrieval-augmented generation (RAG) systems.
+#### Objective
+Assess performance when handling large input contexts and longer responses typical of retrieval-augmented generation (RAG) systems.
 
-**Workload Profile:**
+#### Workload Profile
 - **Input tokens:** ~4096 per request
 - **Output tokens:** ~512 per request
 - **Interaction type:** Long-form context ingestion with detailed answers
-- **Duration:** 15 minutes (default)
-- **Concurrency:** 20 parallel sessions (default)
-- **Rate:** Moderate pace representing document querying workloads
+- **Dataset:** BillSum (long legislative documents from [FiscalNote/billsum](https://huggingface.co/datasets/FiscalNote/billsum))
 
-**Success Criteria:**
-- TTFT median < 3 seconds (higher due to long context)
-- Throughput stability (no significant degradation)
-- No OOM errors or memory-related failures
-- Consistent tokens/second efficiency
+#### Test Parameters
+- **Duration:** 10–15 minutes (default: 15 minutes)
+  - Longer runs needed for large context processing
+- **Concurrency:** ~20 parallel sessions (default: 20 users)
+- **Rate:** Moderate, with bursts representing multiple users querying documents simultaneously
+- **Number of Users Simulated:** Enterprise-scale workloads, such as analysts querying knowledge bases
 
-**Use Cases:**
-Knowledge-base assistants, research copilots, enterprise search systems requiring context-heavy queries.
+#### Benchmark Focus
+- **Memory Load:** Stress-test KV cache growth and GPU memory usage
+- **Latency Distribution:** Observe how latency scales with large token counts
+- **Throughput Impact:** Identify drop-offs as request size increases
 
-**Dataset:** BillSum (long legislative documents from [FiscalNote/billsum](https://huggingface.co/datasets/FiscalNote/billsum), fixed at benchmark level)
+#### Success Criteria
+- ✅ TTFT median < 3 seconds (higher due to long context)
+- ✅ Throughput stability (no significant degradation)
+- ✅ No OOM errors or memory-related failures
+- ✅ Consistent tokens/second efficiency
 
-**Run:**
+#### Business Context
+Knowledge-base assistants, research copilots, or enterprise search systems requiring context-heavy queries.
+
+#### Run Example
 ```bash
 python examples/benchmark_rag_simulation.py \
     --host https://your-llm-endpoint.com \
@@ -72,39 +106,54 @@ python examples/benchmark_rag_simulation.py \
     --tokenizer NousResearch/Meta-Llama-3.1-8B-Instruct
 ```
 
-**Focus Areas:**
+#### Focus Areas
 - KV cache growth and GPU memory usage
 - Latency scaling with large token counts
 - Throughput impact vs short contexts
 - Memory management efficiency
 
+#### RAG-Specific Notes
+- Large contexts stress memory management
+- TTFT expected to be higher than Test 1a
+- Watch for OOM errors and throughput degradation
+- Measure tokens/second efficiency
+
 ---
 
-### ✅ Test 1c: Code Generation Simulation
+### ✅ Test 1c: Code Generation Simulation (512 input / 512 output tokens)
+
 **File:** `examples/benchmark_code_generation.py`
 
-**Objective:** Benchmark balanced input-output scenarios common in development assistance and code generation.
+#### Objective
+Benchmark balanced input-output scenarios common in development assistance and code generation.
 
-**Workload Profile:**
+#### Workload Profile
 - **Input tokens:** ~512 per request
 - **Output tokens:** ~512 per request
 - **Interaction type:** Medium-sized prompts with equally long completions
-- **Duration:** 10 minutes (default)
-- **Concurrency:** 30 developer sessions (default)
-- **Rate:** Constant flow reflecting active programming cycles
+- **Dataset:** Synthetic code generation prompts (Python, JavaScript, Java, Go tasks)
 
-**Success Criteria:**
-- Median latency < 2 seconds
-- P99 latency < 5 seconds
-- Sustained throughput across all sessions
-- No degradation during continuous coding assistance
+#### Test Parameters
+- **Duration:** 5–10 minutes (default: 10 minutes)
+- **Concurrency:** ~30 developer sessions (default: 30 users)
+- **Rate:** Constant flow of requests, reflecting active programming cycles
+- **Number of Users Simulated:** Teams of developers using AI assistants concurrently
 
-**Use Cases:**
-AI-powered coding copilots, auto-completion engines, dev tool integrations where balanced input/output is typical.
+#### Benchmark Focus
+- **Balanced Load:** Measures efficiency when both prompt parsing and response generation are significant
+- **Latency:** Focus on median and tail latencies for developer workflow smoothness
+- **Throughput:** Can the system sustain multiple code completions in parallel?
 
-**Dataset:** Synthetic code generation prompts (Python, JavaScript, Java, Go tasks)
+#### Success Criteria
+- ✅ Median latency < 2 seconds
+- ✅ P99 latency < 5 seconds
+- ✅ Sustained throughput across all sessions
+- ✅ No degradation during continuous coding assistance
 
-**Run:**
+#### Business Context
+AI-powered coding copilots, auto-completion engines, or dev tool integrations where balanced input/output is typical.
+
+#### Run Example
 ```bash
 python examples/benchmark_code_generation.py \
     --host https://your-llm-endpoint.com \
@@ -113,7 +162,7 @@ python examples/benchmark_code_generation.py \
     --tokenizer NousResearch/Meta-Llama-3.1-8B-Instruct
 ```
 
-**Focus Areas:**
+#### Focus Areas
 - Balanced load performance (equal prompt/response sizes)
 - Developer workflow smoothness (median/tail latencies)
 - Multi-language code generation capability
@@ -122,30 +171,40 @@ python examples/benchmark_code_generation.py \
 ---
 
 ### ✅ Test 2a: Constant Rate (Sustained Load)
+
 **File:** `examples/benchmark_constant_rate.py`
 
-**Objective:** Validate system reliability and performance under continuous, predictable workloads.
+#### Objective
+Validate system reliability and performance under continuous, predictable workloads.
 
-**Workload Profile:**
+#### Workload Profile
 - **Input tokens:** ~512 per request
 - **Output tokens:** ~256 per request
 - **Interaction type:** Steady production-like traffic flow
-- **Duration:** 20 minutes (default)
-- **Concurrency:** 40 concurrent streams (default)
-- **Rate:** Fixed at 2 requests/second across all users
+- **Dataset:** ShareGPT (mixed conversational, fixed at benchmark level)
 
-**Success Criteria:**
-- No latency degradation over time
-- Throughput consistency (maintains target req/s)
-- Error rate < 0.1% for production readiness
-- Stable P99 latency throughout test
+#### Test Parameters
+- **Duration:** 15–20 minutes (default: 20 minutes)
+  - Longer duration to reveal long-term degradation trends
+- **Concurrency:** ~40 concurrent streams (default: 40 users)
+- **Rate:** Fixed at ~2 requests/second across all users
+- **Number of Users Simulated:** Dozens of sustained user sessions
 
-**Use Cases:**
+#### Benchmark Focus
+- **Sustained Performance:** Identify whether latency degrades over time
+- **Stability:** Measure throughput consistency and error rates
+- **SLA Readiness:** Ensures performance guarantees can be met under steady load
+
+#### Success Criteria
+- ✅ No latency degradation over time
+- ✅ Throughput consistency (maintains target req/s)
+- ✅ Error rate < 0.1% for production readiness
+- ✅ Stable P99 latency throughout test
+
+#### Business Context
 Enterprise deployments with predictable usage patterns, such as internal productivity copilots or workflow automation tools.
 
-**Dataset:** ShareGPT (mixed conversational, fixed at benchmark level)
-
-**Run:**
+#### Run Example
 ```bash
 python examples/benchmark_constant_rate.py \
     --host https://your-llm-endpoint.com \
@@ -154,7 +213,7 @@ python examples/benchmark_constant_rate.py \
     --tokenizer NousResearch/Meta-Llama-3.1-8B-Instruct
 ```
 
-**Custom Rate:**
+#### Custom Rate Example
 ```bash
 # Test with different constant rate
 python examples/benchmark_constant_rate.py \
@@ -166,14 +225,14 @@ python examples/benchmark_constant_rate.py \
     --duration 1800
 ```
 
-**Focus Areas:**
+#### Focus Areas
 - Long-term performance stability (no degradation)
 - Sustained throughput consistency
 - SLA compliance under steady load
 - Resource utilization patterns
 - Memory leak detection
 
-**Analysis Tips:**
+#### Analysis Tips
 - Plot latency over time to detect gradual degradation
 - Check if actual req/s matches target throughout test
 - Compare P50/P90/P99 across different time buckets
@@ -182,30 +241,40 @@ python examples/benchmark_constant_rate.py \
 ---
 
 ### ✅ Test 2b: Poisson Rate (Bursty Traffic)
+
 **File:** `examples/benchmark_poisson_rate.py`
 
-**Objective:** Evaluate system robustness under irregular, unpredictable bursts of traffic.
+#### Objective
+Evaluate system robustness under irregular, unpredictable bursts of traffic.
 
-**Workload Profile:**
+#### Workload Profile
 - **Input tokens:** ~512 per request
 - **Output tokens:** ~256 per request
 - **Interaction type:** Requests arrive in sudden spikes, modeled with Poisson distribution
-- **Duration:** 15 minutes (default)
+- **Dataset:** ShareGPT (mixed conversational, fixed at benchmark level)
+
+#### Test Parameters
+- **Duration:** 10–15 minutes (default: 15 minutes)
+  - Long enough to capture multiple burst cycles
 - **Concurrency:** Varies dynamically (up to 100 concurrent during bursts)
 - **Rate:** Average 2 req/s, peak 10 req/s during bursts (5x multiplier)
+- **Number of Users Simulated:** Dozens to hundreds depending on burst profile
 
-**Success Criteria:**
-- Low P99 latency during bursts
-- Fast recovery after burst periods
-- Error rate < 1% even during peaks
-- Graceful degradation under overload
+#### Benchmark Focus
+- **Autoscaling:** Tests system's ability to allocate resources dynamically
+- **Queueing & Batching:** Reveals how the system manages traffic spikes
+- **Tail Latency:** Identifies user experience risks under peak load
 
-**Use Cases:**
+#### Success Criteria
+- ✅ Low P99 latency during bursts
+- ✅ Fast recovery after burst periods
+- ✅ Error rate < 1% even during peaks
+- ✅ Graceful degradation under overload
+
+#### Business Context
 Real-world enterprise apps with spiky traffic, such as e-commerce assistants during flash sales, or knowledge tools during peak work hours.
 
-**Dataset:** ShareGPT (mixed conversational, fixed at benchmark level)
-
-**Run:**
+#### Run Example
 ```bash
 python examples/benchmark_poisson_rate.py \
     --host https://your-llm-endpoint.com \
@@ -214,7 +283,7 @@ python examples/benchmark_poisson_rate.py \
     --tokenizer NousResearch/Meta-Llama-3.1-8B-Instruct
 ```
 
-**Custom Burst Configuration:**
+#### Custom Burst Configuration
 ```bash
 # Test with different burst parameters
 python examples/benchmark_poisson_rate.py \
@@ -227,20 +296,20 @@ python examples/benchmark_poisson_rate.py \
     --duration 900
 ```
 
-**Focus Areas:**
+#### Focus Areas
 - Burst handling and queueing mechanisms
 - Tail latency during traffic spikes (P99)
 - Dynamic resource allocation
 - System recovery time post-burst
 - Error rates under overload conditions
 
-**Poisson Distribution Details:**
+#### Poisson Distribution Details
 - Requests follow exponential inter-arrival times
 - Bursts occur periodically (~every 2 minutes)
 - Each burst lasts ~30 seconds
 - Models real-world unpredictable traffic patterns
 
-**Analysis Tips:**
+#### Analysis Tips
 - Plot latency over time to visualize burst impact
 - Compare P99 during burst vs normal periods
 - Measure system recovery time after bursts
@@ -298,14 +367,14 @@ Each benchmark generates detailed CSV output with per-request metrics:
 
 Example: `results/vllm-20250103-120530-1a-chat-simulation.csv`
 
-**Per-Request Logging:**
+### Per-Request Logging
 - ✅ **Always enabled** - All benchmarks log every request to CSV by default
 - ✅ **Console output enabled** - Individual requests shown in console
 - ✅ **Full detail** - Shows all requests (summary_interval = 0)
 
 These settings ensure maximum visibility during benchmark runs.
 
-**Columns:**
+### CSV Columns
 - `request_id` - Unique request identifier
 - `timestamp` - Unix timestamp
 - `user_id` - User/session identifier
@@ -327,24 +396,24 @@ These settings ensure maximum visibility during benchmark runs.
 
 ### Key Metrics to Check
 
-1. **Time to First Token (TTFT)**
-   - Median should be < 1s for chat workloads
-   - P99 should be < 2s for good UX
-   - Watch for degradation over time
+#### 1. Time to First Token (TTFT)
+- Median should be < 1s for chat workloads
+- P99 should be < 2s for good UX
+- Watch for degradation over time
 
-2. **Throughput**
-   - Should remain stable throughout test
-   - No significant drop-offs
-   - Consistent tokens/second
+#### 2. Throughput
+- Should remain stable throughout test
+- No significant drop-offs
+- Consistent tokens/second
 
-3. **Latency Distribution**
-   - Check P50, P90, P99 percentiles
-   - Look for long tail issues
-   - Identify outliers
+#### 3. Latency Distribution
+- Check P50, P90, P99 percentiles
+- Look for long tail issues
+- Identify outliers
 
-4. **Error Rate**
-   - Should be < 0.1% for production systems
-   - Check status codes for failure patterns
+#### 4. Error Rate
+- Should be < 0.1% for production systems
+- Check status codes for failure patterns
 
 ### Example Analysis (Python)
 
@@ -467,15 +536,21 @@ To add new benchmarks:
 
 1. Copy `examples/benchmark_chat_simulation.py` as a template
 2. Adjust constants and configuration for your test
-3. Update this README with test details
-4. Submit a PR with test specification from `docs/TESTS.md`
+3. Update this document with test details
+4. Add test specification details
+5. Submit a PR with documentation
 
 ---
 
 ## References
 
-- [Test Specifications](../docs/TESTS.md) - Detailed benchmark requirements
-- [Metrics Guide](../docs/METRICS_GUIDE.md) - Understanding metrics
-- [Architecture](../docs/ARCHITECTURE.md) - How the system works
-- [Results README](README.md) - Understanding results output
+- [Metrics Guide](METRICS_GUIDE.md) - Understanding metrics
+- [Architecture](ARCHITECTURE.md) - How the system works
+- [Datasets Guide](DATASETS.md) - Supported datasets
+- [Results README](../results/README.md) - Understanding results output
 
+---
+
+**Last Updated:** 2025-10-04  
+**Version:** 1.0  
+**Maintained By:** LLM Locust Team

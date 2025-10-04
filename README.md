@@ -58,13 +58,11 @@ See [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md) for detailed benchmark documentat
 
 Comprehensive documentation is available in the [`docs/`](docs/) directory:
 
-- **[Benchmark Guide](docs/BENCHMARKS.md)** - Running standardized benchmarks
-- **[Benchmark Specifications](docs/TESTS.md)** - Detailed test requirements
-- **[Datasets Guide](docs/DATASETS.md)** - Supported datasets (Dolly, ShareGPT, custom)
-- **[Architecture Guide](docs/ARCHITECTURE.md)** - System design and internals
-- **[Metrics Guide](docs/METRICS_GUIDE.md)** - Complete metrics reference
-- **[Metrics Coverage](docs/METRICS_COVERAGE.md)** - KPI analysis and mapping
-- **[Refactoring Summary](docs/REFACTORING_SUMMARY.md)** - Change history
+- **[Benchmark Guide](docs/BENCHMARKS.md)** - Running standardized benchmarks and detailed specifications
+- **[Architecture Guide](docs/ARCHITECTURE.md)** - System design, datasets, and internals
+- **[Metrics Coverage](docs/METRICS_COVERAGE.md)** - Complete metrics reference and KPI analysis
+- **[Changelog](docs/CHANGELOG.md)** - Version history, refactoring summary, and feature additions
+- **[Interactive CLI Plan](docs/AGILE_PLAN_INTERACTIVE_CLI.md)** - Future roadmap: "The Great Model Race"
 
 See [`docs/README.md`](docs/README.md) for a complete documentation index.
 

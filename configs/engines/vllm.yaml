@@ -1,0 +1,54 @@
+---
+# vLLM Deployment - Standard Configuration
+# GPU Memory Utilization: 92% (high performance)
+# Last Updated: 2025-10-04
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-test
+  labels:
+    app: vllm
+    version: "0.6.3"
+
+spec:
+  replicas: 1
+  
+  selector:
+    matchLabels:
+      app: vllm
+  
+  template:
+    metadata:
+      labels:
+        app: vllm
+        version: "0.6.3"
+    
+    spec:
+      containers:
+      - name: vllm
+        image: docker.io/vllm/vllm-openai:v0.6.3
+        
+        # Resources - Used by cost analysis
+        resources:
+          requests:
+            cpu: "2"
+            memory: 16Gi
+            nvidia.com/gpu: "1"
+          limits:
+            cpu: "4"
+            memory: 24Gi
+            nvidia.com/gpu: "1"
+        
+        # Configuration - Model and GPU utilization extracted
+        args:
+          - "--model=Qwen/Qwen2.5-7B-Instruct"
+          - "--port=8000"
+          - "--host=0.0.0.0"
+          - "--gpu-memory-utilization=0.92"
+          - "--max-model-len=8192"
+          - "--max-num-seqs=64"
+        
+        ports:
+          - name: http
+            containerPort: 8000

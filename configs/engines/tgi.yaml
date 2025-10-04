@@ -1,0 +1,52 @@
+---
+# HuggingFace TGI Deployment
+# Last Updated: 2025-10-04
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tgi-test
+  labels:
+    app: tgi
+    version: "2.0.1"
+
+spec:
+  replicas: 1
+  
+  selector:
+    matchLabels:
+      app: tgi
+  
+  template:
+    metadata:
+      labels:
+        app: tgi
+        version: "2.0.1"
+    
+    spec:
+      containers:
+      - name: tgi
+        image: ghcr.io/huggingface/text-generation-inference:2.0.1
+        
+        # Resources - Used by cost analysis
+        resources:
+          requests:
+            cpu: "2"
+            memory: 16Gi
+            nvidia.com/gpu: "1"
+          limits:
+            cpu: "4"
+            memory: 24Gi
+            nvidia.com/gpu: "1"
+        
+        # Configuration - Model extracted
+        args:
+          - "--model-id=Qwen/Qwen2.5-7B-Instruct"
+          - "--port=8080"
+          - "--max-input-length=7680"
+          - "--max-total-tokens=8192"
+          - "--max-batch-prefill-tokens=8192"
+        
+        ports:
+          - name: http
+            containerPort: 8080
