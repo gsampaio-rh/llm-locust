@@ -237,6 +237,45 @@ else:
 
     st.markdown("---")
 
+    # ============= EXPORT SECTION =============
+    st.markdown("## 💾 Export Summary Report")
+    st.caption("Download executive summary with key metrics")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        # CSV Export
+        csv_data = export_summary_csv(benchmarks)
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        csv_filename = f"benchmark-summary-{timestamp}.csv"
+
+        st.download_button(
+            label="📥 Download CSV",
+            data=csv_data,
+            file_name=csv_filename,
+            mime="text/csv",
+            help="Download summary metrics as CSV for analysis",
+        )
+
+    with col2:
+        # Markdown Export
+        md_data = export_summary_markdown(benchmarks)
+        md_filename = f"benchmark-summary-{timestamp}.md"
+
+        st.download_button(
+            label="📥 Download Markdown",
+            data=md_data,
+            file_name=md_filename,
+            mime="text/markdown",
+            help="Download formatted report for documentation",
+        )
+
+    # Preview
+    with st.expander("👀 Preview Markdown Report"):
+        st.markdown(md_data)
+
+    st.markdown("---")
+
     # Normalized comparison
     if len(benchmarks) >= 2:
         st.markdown("## 🎨 Normalized Performance")
