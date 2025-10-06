@@ -31,7 +31,7 @@ Usage:
         --host https://your-llm-endpoint.com \\
         --model your-model-name \\
         --engine vllm \\
-        --tokenizer NousResearch/Meta-Llama-3.1-8B-Instruct
+        --tokenizer Qwen/Qwen2.5-7B-Instruct
 """
 
 import argparse
@@ -283,7 +283,7 @@ def main() -> None:
     parser.add_argument(
         "--tokenizer",
         type=str,
-        default="NousResearch/Meta-Llama-3.1-8B-Instruct",
+        default="Qwen/Qwen2.5-7B-Instruct",
         help="Tokenizer to use (default: Meta-Llama-3.1-8B-Instruct)",
     )
     parser.add_argument(

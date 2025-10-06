@@ -28,7 +28,7 @@ Usage:
     python examples/benchmark_chat_simulation.py \\
         --host https://your-llm-endpoint.com \\
         --model your-model-name \\
-        --tokenizer NousResearch/Meta-Llama-3.1-8B-Instruct
+        --tokenizer Qwen/Qwen2.5-7B-Instruct
 """
 
 import argparse
@@ -102,7 +102,7 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    
+
     # Required arguments
     parser.add_argument(
         "--host",
@@ -122,13 +122,13 @@ def main() -> None:
         required=True,
         help="Engine/platform name (e.g., vllm, tgi, ollama) - used in output filename",
     )
-    
+
     # Optional arguments
     parser.add_argument(
         "--tokenizer",
         type=str,
-        default="NousResearch/Meta-Llama-3.1-8B-Instruct",
-        help="Tokenizer to use (default: Meta-Llama-3.1-8B-Instruct)",
+        default="Qwen/Qwen2.5-7B-Instruct",
+        help="Tokenizer to use (default: Qwen/Qwen2.5-7B-Instruct)",
     )
     parser.add_argument(
         "--users",
@@ -164,7 +164,7 @@ def main() -> None:
     # Create output directory
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Output file for this benchmark run
     output_file = output_dir / output_filename
 
@@ -218,19 +218,19 @@ def main() -> None:
     logger.info(f"📚 Loading {DATASET_NAME.upper()} dataset (conversational prompts)...")
     logger.info(f"   Filtering for ~{TARGET_INPUT_TOKENS} input tokens")
     logger.info(f"   ({INPUT_TOKEN_MIN}-{INPUT_TOKEN_MAX} token range)")
-    
+
     # Dataset selection is fixed for this benchmark (ShareGPT = conversational)
     prompts = load_sharegpt(
         tokenizer,
         min_input_length=INPUT_TOKEN_MIN,
         max_input_length=INPUT_TOKEN_MAX,
     )
-    
+
     if len(prompts) < 10:
         logger.error(f"❌ Insufficient prompts found ({len(prompts)}). Need at least 10.")
         logger.error("   Try adjusting token range or use a different dataset.")
         sys.exit(1)
-    
+
     logger.info(f"✅ Loaded {len(prompts)} prompts")
 
     # Create client
@@ -276,7 +276,7 @@ def main() -> None:
         args=(client, metrics_queue, control_queue, args.users, args.spawn_rate),
     )
     spawner_process.start()
-    
+
     # Give it a moment to start
     time.sleep(1)
 
@@ -292,10 +292,10 @@ def main() -> None:
         spawner_process.terminate()
         spawner_process.join()
         collector.stop_logging()
-        
+
         # Close per-request logger
         per_request_logger.close()
-        
+
         logger.info("")
         logger.info("=" * 80)
         logger.info("✅ BENCHMARK COMPLETE")
@@ -309,7 +309,7 @@ def main() -> None:
         logger.info("")
         per_request_logger.print_summary()
         logger.info("=" * 80)
-        
+
         sys.exit(0)
 
     signal.signal(signal.SIGINT, signal_handler)
@@ -332,7 +332,7 @@ def main() -> None:
         while time.time() - start_time < args.duration:
             elapsed = int(time.time() - start_time)
             remaining = args.duration - elapsed
-            
+
             # Progress update every 60 seconds
             if elapsed % 60 == 0 and elapsed > 0:
                 progress_pct = (elapsed / args.duration) * 100
@@ -341,7 +341,7 @@ def main() -> None:
                     f"⏱️  Progress: {elapsed}s / {args.duration}s "
                     f"({progress_pct:.1f}% complete, {remaining}s remaining)"
                 )
-            
+
             time.sleep(1)
     except KeyboardInterrupt:
         logger.info("\n🛑 Benchmark interrupted by user")
@@ -350,10 +350,9 @@ def main() -> None:
     logger.info("=" * 80)
     logger.info("⏹️  Benchmark Duration Complete")
     logger.info("=" * 80)
-    
+
     signal_handler(signal.SIGINT, None)
 
 
 if __name__ == "__main__":
     main()
-

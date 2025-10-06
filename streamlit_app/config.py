@@ -38,11 +38,19 @@ OPTIONAL_COLUMNS: Final[list[str]] = [
 
 # Platform Colors (for charts)
 PLATFORM_COLORS: Final[dict[str, str]] = {
-    "vllm": "#8B5CF6",      # Purple
-    "tgi": "#EC4899",       # Pink
-    "ollama": "#06B6D4",    # Cyan
-    "openai": "#10B981",    # Green
-    "default": "#F59E0B",   # Amber
+    # vLLM variants (distinct colors)
+    "vllm": "#8B5CF6",              # Purple (base vLLM)
+    "vllm_cost": "#F59E0B",         # Amber/Orange (cost-optimized)
+    "vllm-performance": "#FBBF24",  # Gold/Yellow (max performance)
+    "vllm-quantized": "#10B981",    # Green (quantized/efficient)
+    "vllm-perf": "#FBBF24",         # Gold (alias for performance)
+    "vllm-quant": "#10B981",        # Green (alias for quantized)
+    
+    # Other platforms
+    "tgi": "#EC4899",               # Pink
+    "ollama": "#06B6D4",            # Cyan
+    "openai": "#3B82F6",            # Blue
+    "default": "#EF4444",           # Red (unknown)
 }
 
 # Status Colors

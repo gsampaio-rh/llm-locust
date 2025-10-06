@@ -1,0 +1,34 @@
+# Performance vs Quantized Benchmark Race
+# Compare max-performance vs cost-optimized quantized deployment
+
+race:
+  name: "Performance vs Quantized - Optimization Comparison"
+
+  # Full benchmark (5 minutes)
+  duration: 300
+  users: 30
+  spawn_rate: 3.0
+
+  # Chat simulation workload
+  dataset: "sharegpt"
+  target_input_tokens: 256
+  target_output_tokens: 128
+
+  output_dir: "results/races"
+
+  # Two optimization strategies
+  engines:
+    - name: "vllm-perf"
+      url: "https://vllm-performance-vllm-benchmark.apps.cluster-njnqr.njnqr.sandbox1049.opentlc.com"
+      model: "Qwen/Qwen2.5-7B-Instruct"
+      emoji: "⚡"
+      color: "bright_yellow"
+      tokenizer: "Qwen/Qwen2.5-7B-Instruct"
+
+    - name: "vllm-quant"
+      url: "https://vllm-quantized-vllm-benchmark.apps.cluster-njnqr.njnqr.sandbox1049.opentlc.com"
+      model: "RedHatAI/Qwen2.5-7B-quantized.w8a8"
+      emoji: "💰"
+      color: "bright_green"
+      tokenizer: "Qwen/Qwen2.5-7B-Instruct"
+

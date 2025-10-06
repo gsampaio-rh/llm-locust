@@ -100,7 +100,7 @@ def main() -> None:
     parser.add_argument(
         "--tokenizer",
         type=str,
-        default="NousResearch/Meta-Llama-3.1-8B-Instruct",
+        default="Qwen/Qwen2.5-7B-Instruct",
         help="Tokenizer to use",
     )
     parser.add_argument(

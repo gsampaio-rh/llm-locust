@@ -42,7 +42,7 @@ python examples/benchmark_chat_simulation.py \
     --host http://localhost:8000 \
     --model your-model-name \
     --engine vllm \
-    --tokenizer NousResearch/Meta-Llama-3.1-8B-Instruct
+    --tokenizer Qwen/Qwen2.5-7B-Instruct
 ```
 
 **Available Benchmarks:**
@@ -96,7 +96,7 @@ from multiprocessing import Process, Queue
 import asyncio
 
 # Load tokenizer and prompts
-tokenizer = AutoTokenizer.from_pretrained("NousResearch/Meta-Llama-3.1-8B-Instruct")
+tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-7B-Instruct")
 prompts = load_databricks_dolly(tokenizer, min_input_length=100, max_input_length=500)
 
 # Create client

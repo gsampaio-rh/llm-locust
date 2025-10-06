@@ -193,15 +193,19 @@ else:
     
     for idx, benchmark in enumerate(benchmarks):
         with cols[idx]:
-            # Platform name with winner badge
+            # Platform name with winner badge (smaller font to prevent wrapping)
             is_winner = (
                 idx == winner_ttft_idx or 
                 idx == winner_throughput_idx or 
                 idx == winner_reliability_idx
             )
             
-            header = f"🏆 **{benchmark.metadata.platform}**" if is_winner else f"**{benchmark.metadata.platform}**"
-            st.markdown(header)
+            # Use smaller font size to prevent breaking alignment
+            if is_winner:
+                header = f'<p style="font-size: 14px; font-weight: bold; margin: 0;">🏆 {benchmark.metadata.platform}</p>'
+            else:
+                header = f'<p style="font-size: 14px; font-weight: bold; margin: 0;">{benchmark.metadata.platform}</p>'
+            st.markdown(header, unsafe_allow_html=True)
             
             # TTFT
             ttft_color = "🟢" if benchmark.ttft_p50 < 500 else "🟡" if benchmark.ttft_p50 < 1000 else "🔴"

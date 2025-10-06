@@ -1,0 +1,109 @@
+# vLLM Performance - Maximum Performance Configuration
+# Purpose: Benchmark with all performance optimizations enabled
+# Last Updated: 2025-10-06
+# Benchmark ID: Performance vs Quantized comparison
+
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: vllm-performance
+  namespace: vllm-benchmark
+  labels:
+    app.kubernetes.io/name: vllm
+    app.kubernetes.io/instance: vllm-performance
+    vllm.config/name: performance
+  annotations:
+    performance.mode: maximum
+    purpose: maximum-performance
+    optimizations: 'prefix-caching,chunked-prefill,v2-block-manager,preemption,multi-step-stream'
+    features.enabled: all
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vllm
+      app.kubernetes.io/instance: vllm-performance
+
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vllm
+        app.kubernetes.io/instance: vllm-performance
+      annotations:
+        performance.mode: maximum
+        features.enabled: all
+
+    spec:
+      containers:
+        - name: vllm
+          image: 'docker.io/vllm/vllm-openai:latest'
+
+          resources:
+            requests:
+              cpu: '2'
+              memory: 16Gi
+              nvidia.com/gpu: '1'
+            limits:
+              cpu: '4'
+              memory: 24Gi
+              nvidia.com/gpu: '1'
+
+          args:
+            - '--model=Qwen/Qwen2.5-7B-Instruct'
+            - '--port=8000'
+            - '--host=0.0.0.0'
+            - '--dtype=auto'
+            - '--gpu-memory-utilization=0.90'  # 90% - maximum utilization
+            - '--swap-space=8'
+            - '--max-model-len=4096'
+            - '--max-num-batched-tokens=6144'
+            - '--max-num-seqs=64'
+            - '--enable-prefix-caching'
+            - '--prefix-caching-hash-algo=builtin'
+            - '--enable-chunked-prefill'
+            - '--scheduling-policy=priority'
+            - '--num-lookahead-slots=8'
+            - '--preemption-mode=recompute'
+            - '--disable-log-stats'
+
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+
+          env:
+            - name: HF_HOME
+              value: /models/.cache/huggingface
+            - name: VLLM_WORKER_MULTIPROC_METHOD
+              value: spawn
+            - name: CUDA_VISIBLE_DEVICES
+              value: '0'
+            - name: NCCL_DEBUG
+              value: WARN
+            - name: VLLM_USE_MODELSCOPE
+              value: 'False'
+
+          volumeMounts:
+            - name: model-cache
+              mountPath: /models
+            - name: dshm
+              mountPath: /dev/shm
+
+      volumes:
+        - name: model-cache
+          persistentVolumeClaim:
+            claimName: vllm-performance-cache
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 8Gi
+
+      nodeSelector:
+        nvidia.com/gpu.present: 'true'
+
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+
