@@ -13,6 +13,7 @@ from config import (
     MAX_FILES,
 )
 from lib.data_loader import load_multiple_benchmarks
+from lib.export import export_summary_csv, export_summary_markdown
 from lib.statistics import compare_benchmarks
 from lib.visualizations import create_normalized_comparison_chart
 
