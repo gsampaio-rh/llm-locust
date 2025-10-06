@@ -4,6 +4,8 @@
 Professional analysis tool for comparing LLM serving platforms.
 """
 
+from datetime import datetime
+
 import streamlit as st
 
 from config import (
