@@ -1034,162 +1034,102 @@ else:
     if selected_api_models:
         st.markdown("---")
         
-        # Calculate API costs based on benchmark workload
-        st.markdown("#### 💰 API Cost Comparison")
-        st.caption("Based on actual token usage from your benchmarks")
+        # Simple pricing comparison - reuse costs from Cost Efficiency Comparison above
+        st.markdown("#### 💰 Pricing Comparison: Self-Hosted vs API")
         
-        # Calculate average token usage across all benchmarks
-        total_requests = sum(b.metadata.total_requests for b in benchmarks)
-        total_input_tokens = sum(b.df["input_tokens"].sum() for b in benchmarks)
-        total_output_tokens = sum(b.df["output_tokens"].sum() for b in benchmarks)
-        avg_input_tokens = total_input_tokens / total_requests if total_requests > 0 else 0
-        avg_output_tokens = total_output_tokens / total_requests if total_requests > 0 else 0
+        # Build INPUT comparison table
+        input_comparison = []
         
-        # Display workload characteristics
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Avg Input Tokens", f"{avg_input_tokens:.0f}")
-        with col2:
-            st.metric("Avg Output Tokens", f"{avg_output_tokens:.0f}")
-        with col3:
-            st.metric("Total Requests", f"{total_requests:,}")
+        # Add self-hosted (from input_cost_results already calculated)
+        for item in input_cost_results:
+            input_comparison.append({
+                "Platform": f"🔧 {item['Platform']}",
+                "Type": "Self-Hosted",
+                "Provider": item.get("Provider", "N/A") if "Provider" in input_cost_results[0] else "N/A",
+                "Input $/1M": item["$/1M Input Tokens"],
+                "Input_Cost_Value": float(item["$/1M Input Tokens"].replace("$", "").replace(",", "")) if item["$/1M Input Tokens"] != "N/A" else 999999,
+            })
         
-        st.markdown("---")
-        
-        # Build comparison table
-        comparison_data = []
-        
-        # Add self-hosted platforms
-        for benchmark in benchmarks:
-            platform = benchmark.metadata.platform
-            config = st.session_state["cost_config"][platform]
-            
-            # Calculate sustained throughput
-            success_df_temp = benchmark.df[benchmark.df["status_code"] == 200]
-            total_output_temp = success_df_temp["output_tokens"].sum() if len(success_df_temp) > 0 else 0
-            sustained_throughput = total_output_temp / benchmark.metadata.duration_seconds if benchmark.metadata.duration_seconds > 0 else 0
-            
-            if sustained_throughput > 0:
-                # Get YAML config for this platform (if available)
-                yaml_config = None
-                if "yaml_loaded_configs" in st.session_state:
-                    yaml_config = st.session_state["yaml_loaded_configs"].get(platform)
-                    if not yaml_config:
-                        for yaml_platform, yaml_cfg in st.session_state["yaml_loaded_configs"].items():
-                            if yaml_platform.lower() == platform.lower():
-                                yaml_config = yaml_cfg
-                                break
-                
-                # Calculate actual cost based on allocation mode
-                base_cost_per_hour = config["cost_per_hour"]
-                instance_gpu_count = config.get("gpu_count", 1)
-                
-                if use_proportional and yaml_config and yaml_config.gpu_memory_utilization:
-                    cost_per_gpu = base_cost_per_hour / instance_gpu_count
-                    gpu_util = yaml_config.gpu_memory_utilization
-                    deployment_gpu_count = yaml_config.gpu_count
-                    replicas = yaml_config.replicas
-                    cost_per_hour = cost_per_gpu * gpu_util * deployment_gpu_count * replicas
-                else:
-                    cost_per_hour = base_cost_per_hour
-                    if yaml_config:
-                        replicas = yaml_config.replicas
-                        cost_per_hour = base_cost_per_hour * replicas
-                
-                # Calculate separate costs for input and output
-                # Get input and output throughput
-                total_input_temp = success_df_temp["input_tokens"].sum() if len(success_df_temp) > 0 else 0
-                input_throughput_temp = total_input_temp / benchmark.metadata.duration_seconds if benchmark.metadata.duration_seconds > 0 else 0
-                output_throughput_temp = sustained_throughput
-                
-                # Input cost per 1M
-                input_tokens_per_hour = input_throughput_temp * 3600
-                cost_per_1m_input = (cost_per_hour / input_tokens_per_hour) * 1_000_000 if input_tokens_per_hour > 0 else 0
-                
-                # Output cost per 1M
-                output_tokens_per_hour = output_throughput_temp * 3600
-                cost_per_1m_output = (cost_per_hour / output_tokens_per_hour) * 1_000_000 if output_tokens_per_hour > 0 else 0
-                
-                # Cost for benchmark workload
-                benchmark_duration_hours = benchmark.metadata.duration_seconds / 3600
-                workload_cost = cost_per_hour * benchmark_duration_hours
-                
-                comparison_data.append({
-                    "Platform": f"🔧 {platform}",
-                    "Type": "Self-Hosted",
-                    "Provider": config["cloud_provider"],
-                    "TTFT P50 (ms)": f"{benchmark.ttft_p50:.0f}",
-                    "$/Hour": f"${cost_per_hour:.2f}",
-                    "$/1M Input Tokens": f"${cost_per_1m_input:.2f}",
-                    "$/1M Output Tokens": f"${cost_per_1m_output:.2f}",
-                    "Workload Cost": f"${workload_cost:.2f}",
-                    "Latency": benchmark.ttft_p50,  # For sorting
-                    "Cost_Value": cost_per_1m_output,  # For sorting (use output cost)
-                })
-        
-        # Add API providers
+        # Add APIs
         for model_name in selected_api_models:
             if model_name in api_pricing:
                 pricing = api_pricing[model_name]
+                cost_per_1m_input = pricing.input_cost_per_token * 1_000_000
                 
-                # Calculate cost per 1M tokens (separate for input and output)
-                cost_per_1m_input, cost_per_1m_output = pricing.calculate_cost_per_1m_tokens(
-                    int(avg_input_tokens),
-                    int(avg_output_tokens),
-                )
-                
-                # Calculate cost for the actual benchmark workload
-                workload_cost = pricing.calculate_cost_for_workload(
-                    total_requests,
-                    avg_input_tokens,
-                    avg_output_tokens,
-                )
-                
-                comparison_data.append({
+                input_comparison.append({
                     "Platform": f"☁️ {model_name}",
                     "Type": "API",
                     "Provider": pricing.provider.upper(),
-                    "TTFT P50 (ms)": "N/A",
-                    "$/Hour": "Pay-per-use",
-                    "$/1M Input Tokens": f"${cost_per_1m_input:.2f}",
-                    "$/1M Output Tokens": f"${cost_per_1m_output:.2f}",
-                    "Workload Cost": f"${workload_cost:.2f}",
-                    "Latency": 9999,  # For sorting (APIs unknown latency)
-                    "Cost_Value": cost_per_1m_output,  # For sorting (use output cost)
+                    "Input $/1M": f"${cost_per_1m_input:.2f}",
+                    "Input_Cost_Value": cost_per_1m_input,
                 })
         
-        # Display comparison table
-        import pandas as pd
-        df_comparison = pd.DataFrame(comparison_data)
-        
-        # Drop helper columns before display
-        df_display = df_comparison.drop(columns=["Latency", "Cost_Value"])
-        
-        st.dataframe(
-            df_display,
-            use_container_width=True,
-            hide_index=True,
-        )
+        # Display INPUT comparison
+        st.markdown("##### 📥 Input Token Pricing")
+        input_df = pd.DataFrame(input_comparison)
+        input_display = input_df.drop(columns=["Input_Cost_Value"]).sort_values("Input $/1M")
+        st.dataframe(input_display, use_container_width=True, hide_index=True)
         
         st.caption("""
-        **Costs shown separately for Input and Output tokens:**
-        - **$/1M Input Tokens**: Cost to process 1M input tokens (prompts)
-        - **$/1M Output Tokens**: Cost to generate 1M output tokens (responses) - **Primary cost driver!**
-        - **Workload Cost**: Total cost for your actual benchmark
-          - Self-hosted: Infrastructure cost for test duration
-          - API: Pay-per-token (input + output) for actual requests
-        
-        💡 **For self-hosted**: Same infrastructure cost applies to both input and output
-        💡 **For APIs**: Input and output are priced separately (OpenAI charges different rates!)
+        **Input token pricing** (prompts sent to the model):
+        - Self-hosted: Infrastructure cost ÷ input throughput
+        - API: Per-token charge for processing prompts
         """)
         
         st.markdown("---")
         
-        # Key insights
+        # Build OUTPUT comparison table
+        output_comparison = []
+        
+        # Add self-hosted (from output_cost_results already calculated)
+        for item in output_cost_results:
+            output_comparison.append({
+                "Platform": f"🔧 {item['Platform']}",
+                "Type": "Self-Hosted",
+                "Provider": item.get("Provider", "N/A") if "Provider" in output_cost_results[0] else "N/A",
+                "Output $/1M": item["$/1M Output Tokens"],
+                "Output_Cost_Value": float(item["$/1M Output Tokens"].replace("$", "").replace(",", "")) if item["$/1M Output Tokens"] != "N/A" else 999999,
+            })
+        
+        # Add APIs
+        for model_name in selected_api_models:
+            if model_name in api_pricing:
+                pricing = api_pricing[model_name]
+                cost_per_1m_output = pricing.output_cost_per_token * 1_000_000
+                
+                output_comparison.append({
+                    "Platform": f"☁️ {model_name}",
+                    "Type": "API",
+                    "Provider": pricing.provider.upper(),
+                    "Output $/1M": f"${cost_per_1m_output:.2f}",
+                    "Output_Cost_Value": cost_per_1m_output,
+                })
+        
+        # Display OUTPUT comparison
+        st.markdown("##### 📤 Output Token Pricing - **PRIMARY COST DRIVER!**")
+        output_df = pd.DataFrame(output_comparison)
+        output_display = output_df.drop(columns=["Output_Cost_Value"]).sort_values("Output $/1M")
+        st.dataframe(output_display, use_container_width=True, hide_index=True)
+        
+        st.caption("""
+        **Output token pricing** (responses generated by the model) - **KEY METRIC:**
+        - Self-hosted: Infrastructure cost ÷ output throughput (your bottleneck!)
+        - API: Per-token charge for generating responses
+        
+        💡 **Focus here**: Output generation is the capacity bottleneck and main cost driver!
+        🎯 **Simple math**: Need 10M output tokens? Multiply Output $/1M by 10
+        """)
+        
+        # Store for break-even analysis
+        comparison_data = output_comparison  # Use output data for break-even
+        
+        st.markdown("---")
+        
+        # Key insights (based on OUTPUT tokens - the bottleneck)
         st.markdown("#### 🎯 Cost Comparison Insights")
         
-        # Find cheapest and most expensive
-        sorted_by_cost = sorted(comparison_data, key=lambda x: x["Cost_Value"])
+        # Find cheapest by output cost (the bottleneck)
+        sorted_by_cost = sorted(comparison_data, key=lambda x: x["Output_Cost_Value"])
         cheapest = sorted_by_cost[0]
         most_expensive = sorted_by_cost[-1]
         
@@ -1197,58 +1137,103 @@ else:
         
         with col1:
             st.success(f"""
-            **💰 Most Cost-Efficient**
+            **💰 Lowest Output Token Cost**
             
             {cheapest['Platform']}
             - Type: {cheapest['Type']}
-            - Input Cost: {cheapest['$/1M Input Tokens']} per 1M tokens
-            - Output Cost: {cheapest['$/1M Output Tokens']} per 1M tokens
-            - Workload: {cheapest['Workload Cost']}
+            - Output: {cheapest['Output $/1M']} per 1M tokens
             """)
         
         with col2:
-            # Find fastest self-hosted
-            self_hosted = [x for x in comparison_data if x["Type"] == "Self-Hosted"]
-            if self_hosted:
-                fastest = min(self_hosted, key=lambda x: x["Latency"])
-                st.info(f"""
-                **⚡ Fastest Self-Hosted**
-                
-                {fastest['Platform']}
-                - TTFT P50: {fastest['TTFT P50 (ms)']}
-                - Input Cost: {fastest['$/1M Input Tokens']} per 1M tokens
-                - Output Cost: {fastest['$/1M Output Tokens']} per 1M tokens
-                - Workload: {fastest['Workload Cost']}
-                """)
+            st.warning(f"""
+            **💸 Highest Output Token Cost**
+            
+            {most_expensive['Platform']}
+            - Type: {most_expensive['Type']}
+            - Output: {most_expensive['Output $/1M']} per 1M tokens
+            """)
         
         # Cost savings analysis
         st.markdown("---")
         st.markdown("#### 💡 Self-Hosted vs API Trade-offs")
+        st.caption("Select platforms to compare and see break-even analysis")
         
-        # Calculate average self-hosted vs API costs
-        self_hosted_costs = [x["Cost_Value"] for x in comparison_data if x["Type"] == "Self-Hosted"]
-        api_costs = [x["Cost_Value"] for x in comparison_data if x["Type"] == "API"]
+        # Let user select which platforms to compare
+        col1, col2 = st.columns(2)
         
-        if self_hosted_costs and api_costs:
+        with col1:
+            # Get self-hosted platforms
+            self_hosted_platforms = [x for x in comparison_data if x["Type"] == "Self-Hosted"]
+            self_hosted_names = [x["Platform"] for x in self_hosted_platforms]
+            
+            if self_hosted_names:
+                # Default to cheapest
+                cheapest_self_idx = min(range(len(self_hosted_platforms)), 
+                                       key=lambda i: self_hosted_platforms[i]["Output_Cost_Value"])
+                
+                selected_self_hosted = st.selectbox(
+                    "Select Self-Hosted Platform",
+                    options=self_hosted_names,
+                    index=cheapest_self_idx,
+                    key="compare_self_hosted",
+                )
+        
+        with col2:
+            # Get API platforms
+            api_platforms = [x for x in comparison_data if x["Type"] == "API"]
+            api_names = [x["Platform"] for x in api_platforms]
+            
+            if api_names:
+                # Default to cheapest
+                cheapest_api_idx = min(range(len(api_platforms)), 
+                                      key=lambda i: api_platforms[i]["Output_Cost_Value"])
+                
+                selected_api = st.selectbox(
+                    "Select API Model",
+                    options=api_names,
+                    index=cheapest_api_idx,
+                    key="compare_api",
+                )
+        
+        st.markdown("---")
+        
+        # Get selected platforms
+        self_hosted_costs = [x["Output_Cost_Value"] for x in comparison_data if x["Type"] == "Self-Hosted"]
+        api_costs = [x["Output_Cost_Value"] for x in comparison_data if x["Type"] == "API"]
+        
+        if self_hosted_costs and api_costs and self_hosted_names and api_names:
+            # Get the selected platform data
+            cheapest_self = next(x for x in comparison_data if x["Platform"] == selected_self_hosted)
+            cheapest_api = next(x for x in comparison_data if x["Platform"] == selected_api)
             avg_self_hosted = sum(self_hosted_costs) / len(self_hosted_costs)
             avg_api = sum(api_costs) / len(api_costs)
             
-            if avg_self_hosted < avg_api:
-                savings_pct = ((avg_api - avg_self_hosted) / avg_api) * 100
+            # Compare selected platforms
+            self_cost = cheapest_self["Output_Cost_Value"]
+            api_cost = cheapest_api["Output_Cost_Value"]
+            
+            if self_cost < api_cost:
+                savings_pct = ((api_cost - self_cost) / api_cost) * 100
                 st.success(f"""
-                ✅ **Self-hosting is {savings_pct:.1f}% cheaper** than APIs on average
+                ✅ **{selected_self_hosted} is {savings_pct:.1f}% cheaper** than {selected_api}
+                
+                - Self-hosted: {cheapest_self['Output $/1M']}
+                - API: {cheapest_api['Output $/1M']}
                 
                 **When to self-host:**
                 - ✅ High volume workloads (>1M tokens/day)
                 - ✅ Need for low latency (APIs have network overhead)
                 - ✅ Data privacy and compliance requirements
                 - ✅ Model customization (fine-tuning, quantization)
-                - ✅ Predictable monthly costs
+                - ✅ Predictable costs
                 """)
             else:
-                premium_pct = ((avg_self_hosted - avg_api) / avg_self_hosted) * 100
+                premium_pct = ((self_cost - api_cost) / api_cost) * 100
                 st.warning(f"""
-                ⚠️ **APIs are {premium_pct:.1f}% cheaper** than self-hosting on average
+                ⚠️ **{selected_api} is {premium_pct:.1f}% cheaper** than {selected_self_hosted}
+                
+                - Self-hosted: {cheapest_self['Output $/1M']}
+                - API: {cheapest_api['Output $/1M']}
                 
                 **When to use APIs:**
                 - ✅ Low volume workloads (<100K tokens/day)
@@ -1262,40 +1247,64 @@ else:
             
             # Break-even analysis (ECONOMY OF SCALE)
             st.markdown("#### 📊 Economy of Scale Analysis")
-            st.caption("💡 At what token volume does self-hosting become cheaper?")
+            st.caption(f"Comparing: {selected_self_hosted} vs {selected_api}")
             
-            # Use cheapest self-hosted vs cheapest API
-            cheapest_self = min([x for x in comparison_data if x["Type"] == "Self-Hosted"], 
-                               key=lambda x: x["Cost_Value"])
-            cheapest_api = min([x for x in comparison_data if x["Type"] == "API"], 
-                              key=lambda x: x["Cost_Value"])
+            # Use the selected platforms (already set above)
             
-            # Calculate costs at different TOKEN volumes (not QPS!)
+            # Calculate costs for different TOKEN quantities (pure token count!)
             token_levels = [
-                100_000,      # 100K tokens/month (small startup)
-                1_000_000,    # 1M tokens/month  (small app)
-                10_000_000,   # 10M tokens/month (medium app)
-                50_000_000,   # 50M tokens/month (growing app)
-                100_000_000,  # 100M tokens/month (large app)
-                500_000_000,  # 500M tokens/month (enterprise)
-                1_000_000_000 # 1B tokens/month (very large scale)
+                100_000,      # 100K tokens
+                1_000_000,    # 1M tokens
+                10_000_000,   # 10M tokens
+                50_000_000,   # 50M tokens
+                100_000_000,  # 100M tokens
+                500_000_000,  # 500M tokens
+                1_000_000_000 # 1B tokens
             ]
-            hours_per_month = 720  # 30 days
+            
+            # Get self-hosted throughput and cost
+            self_platform_name = cheapest_self["Platform"].replace("🔧 ", "")
+            self_config = st.session_state["cost_config"][self_platform_name]
+            
+            # Find the benchmark for this platform
+            self_benchmark = next((b for b in benchmarks if b.metadata.platform == self_platform_name), None)
+            if self_benchmark:
+                success_df_self = self_benchmark.df[self_benchmark.df["status_code"] == 200]
+                total_output_self = success_df_self["output_tokens"].sum() if len(success_df_self) > 0 else 0
+                self_throughput = total_output_self / self_benchmark.metadata.duration_seconds if self_benchmark.metadata.duration_seconds > 0 else 1
+                
+                # Get actual cost per hour (with discounts)
+                yaml_config_self = None
+                if "yaml_loaded_configs" in st.session_state:
+                    yaml_config_self = st.session_state["yaml_loaded_configs"].get(self_platform_name)
+                
+                base_cost = self_config["cost_per_hour"]
+                if use_proportional and yaml_config_self and yaml_config_self.gpu_memory_utilization:
+                    instance_gpu_count = self_config.get("gpu_count", 1)
+                    cost_per_gpu = base_cost / instance_gpu_count
+                    gpu_util = yaml_config_self.gpu_memory_utilization
+                    deployment_gpu_count = yaml_config_self.gpu_count
+                    replicas = yaml_config_self.replicas
+                    self_cost_per_hour = cost_per_gpu * gpu_util * deployment_gpu_count * replicas
+                else:
+                    self_cost_per_hour = base_cost
+            else:
+                self_throughput = 1
+                self_cost_per_hour = self_config["cost_per_hour"]
+            
+            # Get API pricing
+            api_pricing_obj = api_pricing[cheapest_api["Platform"].replace("☁️ ", "")]
             
             breakeven_data = []
             for tokens in token_levels:
-                # Self-hosted cost (fixed infrastructure)
-                self_config = st.session_state["cost_config"][cheapest_self["Platform"].replace("🔧 ", "")]
-                self_cost = self_config["cost_per_hour"] * hours_per_month
+                # Self-hosted cost = time to process tokens × cost per hour
+                # Time = tokens / throughput (in seconds)
+                # Cost = (time in hours) × cost per hour
+                time_to_process_hours = (tokens / self_throughput) / 3600
+                self_cost = time_to_process_hours * self_cost_per_hour
                 
-                # API cost (pay-per-token)
-                # Calculate total cost based on tokens
-                api_pricing_obj = api_pricing[cheapest_api["Platform"].replace("☁️ ", "")]
-                # API cost = (input_tokens * input_cost) + (output_tokens * output_cost)
-                api_cost = (
-                    (tokens / avg_output_tokens) * avg_input_tokens * api_pricing_obj.input_cost_per_token +
-                    tokens * api_pricing_obj.output_cost_per_token
-                )
+                # API cost = tokens × cost per token (simple!)
+                api_cost = tokens * api_pricing_obj.output_cost_per_token
                 
                 # Format token levels nicely
                 if tokens >= 1_000_000_000:
@@ -1306,22 +1315,25 @@ else:
                     token_label = f"{tokens/1_000:.0f}K"
                 
                 breakeven_data.append({
-                    "Monthly Tokens": token_label,
+                    "Output Token Quantity": token_label,
                     "Tokens (numeric)": tokens,  # Keep for chart
-                    "Self-Hosted": f"${self_cost:,.0f}",
-                    "API": f"${api_cost:,.0f}",
+                    "Self-Hosted Cost": f"${self_cost:.2f}",
+                    "API Cost": f"${api_cost:.2f}",
                     "Winner": "🏆 Self-Hosted" if self_cost < api_cost else "🏆 API",
-                    "Savings": f"${abs(self_cost - api_cost):,.0f}",
+                    "Savings": f"${abs(self_cost - api_cost):.2f}",
                 })
             
             st.table([{k: v for k, v in item.items() if k != "Tokens (numeric)"} for item in breakeven_data])
             
             st.caption(f"""
-            **Comparing cheapest options:**
-            - 🔧 Self-Hosted: {cheapest_self['Platform'].replace('🔧 ', '')} @ {cheapest_self['$/1M Output Tokens']} per 1M output tokens
-            - ☁️ API: {cheapest_api['Platform'].replace('☁️ ', '')} @ {cheapest_api['$/1M Output Tokens']} per 1M output tokens
-            - 📅 Fixed cost runs 24/7 for {hours_per_month} hours/month
-            - 💡 Comparison based on **output token** costs (the capacity bottleneck)
+            **Comparing cheapest options (OUTPUT tokens):**
+            - 🔧 Self-Hosted: {cheapest_self['Platform'].replace('🔧 ', '')} @ {cheapest_self['Output $/1M']} - cost = time to process × infrastructure cost
+            - ☁️ API: {cheapest_api['Platform'].replace('☁️ ', '')} @ {cheapest_api['Output $/1M']} - cost = tokens × per-token price
+            
+            💡 **How costs are calculated**: 
+            - **Self-hosted**: Cost to process X tokens = (X ÷ throughput) × hourly infrastructure cost
+            - **API**: Cost to process X tokens = X × price per token
+            - **Break-even**: Where both methods cost the same for the same quantity
             """)
             
             # Add ECONOMY OF SCALE chart
@@ -1334,51 +1346,184 @@ else:
             self_costs = []
             api_costs = []
             for item in breakeven_data:
-                # Parse costs from string format "$1,234" to float
-                self_cost_str = item["Self-Hosted"].replace("$", "").replace(",", "")
-                api_cost_str = item["API"].replace("$", "").replace(",", "")
+                # Parse costs from string format "$1,234.56" to float
+                self_cost_str = item["Self-Hosted Cost"].replace("$", "").replace(",", "")
+                api_cost_str = item["API Cost"].replace("$", "").replace(",", "")
                 self_costs.append(float(self_cost_str))
                 api_costs.append(float(api_cost_str))
             
-            # Create chart
-            fig = create_breakeven_chart(
-                qps_levels=token_volumes,  # Now using token volumes!
-                self_hosted_costs=self_costs,
-                api_costs=api_costs,
-                self_hosted_label=f"🔧 {cheapest_self['Platform'].replace('🔧 ', '')} (fixed cost)",
-                api_label=f"☁️ {cheapest_api['Platform'].replace('☁️ ', '')} (pay-per-use)",
-                title=f"💰 Economy of Scale: When Does Self-Hosting Pay Off?",
+            # Create TOTAL COST chart - shows the crossing point!
+            import plotly.graph_objects as go
+            
+            fig = go.Figure()
+            
+            # Self-hosted line (relatively flat - fixed infrastructure cost)
+            fig.add_trace(
+                go.Scatter(
+                    x=token_volumes,  # Token volume on X-axis
+                    y=self_costs,  # Total cost on Y-axis
+                    mode="lines+markers",
+                    name=f"🔧 {cheapest_self['Platform'].replace('🔧 ', '')} (infrastructure)",
+                    line=dict(color="#8B5CF6", width=5),
+                    marker=dict(size=14),
+                    hovertemplate="<b>Volume:</b> %{x:,.0f} tokens<br><b>Total Cost:</b> $%{y:.2f}<extra></extra>",
+                )
             )
             
-            # Update X-axis label to be clearer
-            fig.update_layout(
-                xaxis_title="Monthly Token Volume (log scale)",
-                yaxis_title="Monthly Cost ($)",
-                xaxis=dict(
-                    tickformat=".2s",  # Scientific notation
-                    ticksuffix=" tokens",
+            # API line (rises with volume - pay per token)
+            fig.add_trace(
+                go.Scatter(
+                    x=token_volumes,  # Token volume on X-axis
+                    y=api_costs,  # Total cost on Y-axis
+                    mode="lines+markers",
+                    name=f"☁️ {cheapest_api['Platform'].replace('☁️ ', '')} (pay-per-use)",
+                    line=dict(color="#3B82F6", width=5),
+                    marker=dict(size=14),
+                    hovertemplate="<b>Volume:</b> %{x:,.0f} tokens<br><b>Total Cost:</b> $%{y:.2f}<extra></extra>",
                 )
+            )
+            
+            # Find intersection (break-even point) with linear interpolation
+            eq_found = False
+            for i in range(len(token_volumes) - 1):
+                if ((self_costs[i] >= api_costs[i] and self_costs[i+1] < api_costs[i+1]) or
+                    (self_costs[i] <= api_costs[i] and self_costs[i+1] > api_costs[i+1])):
+                    # Linear interpolation to find exact crossing point
+                    x1, x2 = token_volumes[i], token_volumes[i+1]
+                    y1_self, y2_self = self_costs[i], self_costs[i+1]
+                    y1_api, y2_api = api_costs[i], api_costs[i+1]
+                    
+                    # Find t where lines intersect (linear interpolation)
+                    if (y2_self - y1_self) != (y2_api - y1_api):  # Not parallel
+                        t = (y1_api - y1_self) / ((y2_self - y1_self) - (y2_api - y1_api))
+                        eq_tokens = x1 + t * (x2 - x1)
+                        eq_cost = y1_self + t * (y2_self - y1_self)
+                    else:
+                        eq_tokens = (x1 + x2) / 2
+                        eq_cost = (y1_self + y1_api) / 2
+                    
+                    eq_found = True
+                    break
+            
+            # If no crossing found, use point where they're closest
+            if not eq_found:
+                min_diff_idx = min(range(len(token_volumes)), key=lambda i: abs(self_costs[i] - api_costs[i]))
+                eq_tokens = token_volumes[min_diff_idx]
+                eq_cost = (self_costs[min_diff_idx] + api_costs[min_diff_idx]) / 2
+                eq_found = True
+            
+            if eq_found:
+                
+                # Format volume nicely
+                if eq_tokens >= 1_000_000_000:
+                    vol_label = f"{eq_tokens/1_000_000_000:.1f}B"
+                elif eq_tokens >= 1_000_000:
+                    vol_label = f"{eq_tokens/1_000_000:.0f}M"
+                else:
+                    vol_label = f"{eq_tokens:,.0f}"
+                
+                # Add equilibrium point (HUGE purple dot!)
+                fig.add_trace(
+                    go.Scatter(
+                        x=[eq_tokens],
+                        y=[eq_cost],
+                        mode="markers+text",
+                        marker=dict(size=35, color="#9333EA", symbol="circle", line=dict(color="black", width=4)),
+                        text=["⚖️"],
+                        textposition="middle center",
+                        textfont=dict(size=20, color="white"),
+                        name="🎯 Break-Even",
+                        hovertemplate=f"<b>🎯 BREAK-EVEN POINT</b><br>Volume: {vol_label}<br>Cost: ${eq_cost:.2f}<extra></extra>",
+                        showlegend=True,
+                    )
+                )
+                
+                # BOLD dashed lines to both axes
+                fig.add_shape(type="line", x0=min(token_volumes), x1=eq_tokens, y0=eq_cost, y1=eq_cost,
+                             line=dict(color="black", width=3, dash="dash"), layer="above")
+                fig.add_shape(type="line", x0=eq_tokens, x1=eq_tokens, y0=0, y1=eq_cost,
+                             line=dict(color="black", width=3, dash="dash"), layer="above")
+                
+                # Axis labels with boxes
+                fig.add_annotation(x=min(token_volumes), y=eq_cost, text=f" ${eq_cost:.0f} ",
+                                  showarrow=False, xanchor="right",
+                                  font=dict(size=16, color="black", family="Arial Black"),
+                                  bgcolor="yellow", bordercolor="black", borderwidth=2, borderpad=4)
+                
+                fig.add_annotation(x=eq_tokens, y=0, text=f" {vol_label} ",
+                                  showarrow=False, yanchor="top",
+                                  font=dict(size=16, color="black", family="Arial Black"),
+                                  bgcolor="yellow", bordercolor="black", borderwidth=2, borderpad=4)
+                
+                # BIG Equilibrium annotation above the point
+                fig.add_annotation(x=eq_tokens, y=eq_cost, text=f"  BREAK-EVEN\n  {vol_label} @ ${eq_cost:.0f}",
+                                  showarrow=True, arrowhead=2, arrowsize=1.5, arrowwidth=3, 
+                                  ax=100, ay=-70,
+                                  font=dict(size=18, color="black", family="Arial Black"),
+                                  bgcolor="#FFD700", bordercolor="black", borderwidth=3, borderpad=6)
+                
+                # Add shaded regions with text
+                fig.add_vrect(x0=min(token_volumes), x1=eq_tokens,
+                             fillcolor="blue", opacity=0.12, layer="below", line_width=0,
+                             annotation_text="API Cheaper", annotation_position="top left",
+                             annotation=dict(font=dict(size=14, color="blue")))
+                fig.add_vrect(x0=eq_tokens, x1=max(token_volumes),
+                             fillcolor="purple", opacity=0.12, layer="below", line_width=0,
+                             annotation_text="Self-Hosted Cheaper", annotation_position="top right",
+                             annotation=dict(font=dict(size=14, color="purple")))
+            
+            fig.update_layout(
+                title=dict(text="💰 Economy of Scale: Where Do the Lines Cross?",
+                          font=dict(size=22, color="black", family="Arial Black")),
+                xaxis_title="Output Token Volume",
+                yaxis_title="Total Cost to Process ($)",
+                height=700,  # Bigger!
+                hovermode="closest",
+                showlegend=True,
+                legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01,
+                           bgcolor="rgba(255,255,255,0.9)", bordercolor="black", borderwidth=2),
+                xaxis_type="log",  # Log scale for volume
+                plot_bgcolor="white",
+                xaxis=dict(showgrid=True, gridcolor="lightgray", showline=True, 
+                          linewidth=2, linecolor="black", mirror=True,
+                          tickformat=".2s", ticksuffix=" tokens"),
+                yaxis=dict(showgrid=True, gridcolor="lightgray", showline=True,
+                          linewidth=2, linecolor="black", mirror=True),
             )
             
             st.plotly_chart(fig, use_container_width=True, key="economy_of_scale_chart")
             
             # Make it super clear what this means
             st.success("""
-            ### 🎯 What This Chart Shows
+            ### 🎯 Classic Supply & Demand Equilibrium Chart
             
-            **The crossing point** (⭐ green star) is where costs are equal - this is your **break-even volume**.
+            **The purple dot** shows where the lines cross - the **equilibrium point**.
             
-            - **Left of the star** (low volume): API is cheaper → Use APIs for prototyping and low-traffic apps
-            - **Right of the star** (high volume): Self-hosting is cheaper → Self-host for production at scale
+            **How to read:**
+            - **X-axis**: How many output tokens you need to process
+            - **Y-axis**: Total cost to process those tokens
+            - **Purple line** (self-hosted): FLAT! Fixed infrastructure cost (doesn't matter how many tokens)
+            - **Blue line** (API): RISING! Cost increases linearly with token volume
+            
+            **Key insights:**
+            - **Left of equilibrium** (low volume): Blue line is below purple → API is cheaper
+            - **Right of equilibrium** (high volume): Purple line is below blue → Self-hosting is cheaper
+            - **The crossing point** is your break-even volume!
             
             This is **economy of scale** in action! 🚀
             """)
             
             st.caption("""
-            **How to interpret:**
-            - 🟣 **Purple line (flat)**: Self-hosted = fixed monthly cost regardless of usage
-            - 🔵 **Blue line (rising)**: API = cost increases with token volume
-            - 🎨 **Shaded areas**: Show which option saves you money at each volume
+            **Why they cross:**
+            - 🟣 **Self-hosted (flat)**: Pay fixed infrastructure cost regardless of volume
+              - Low volume: Expensive per token (infrastructure underutilized)
+              - High volume: Cheap per token (cost spread over many tokens)
+            
+            - 🔵 **API (rising)**: Pay per token you use
+              - Low volume: Cheap (only pay for what you use)
+              - High volume: Expensive (costs add up linearly)
+            
+            💡 **Below the equilibrium**: APIs win. **Above the equilibrium**: Self-hosting wins!
             """)
 
 st.markdown("---")
