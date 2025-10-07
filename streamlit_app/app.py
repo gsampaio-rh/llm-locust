@@ -261,8 +261,11 @@ else:
         )
 
     with col2:
-        # Markdown Export
-        md_data = export_summary_markdown(benchmarks)
+        # Markdown Export (with cost and config data if available)
+        cost_data = st.session_state.get("cost_config")
+        yaml_data = st.session_state.get("yaml_loaded_configs")
+        
+        md_data = export_summary_markdown(benchmarks, cost_data, yaml_data)
         md_filename = f"benchmark-summary-{timestamp}.md"
 
         st.download_button(
