@@ -28,7 +28,7 @@ Usage:
     python examples/benchmark_chat_simulation.py \\
         --host https://your-llm-endpoint.com \\
         --model your-model-name \\
-        --tokenizer Qwen/Qwen2.5-7B-Instruct
+        --tokenizer meta-llama/Llama-3.2-3B-Instruct
 """
 
 import argparse
@@ -127,8 +127,8 @@ def main() -> None:
     parser.add_argument(
         "--tokenizer",
         type=str,
-        default="Qwen/Qwen2.5-7B-Instruct",
-        help="Tokenizer to use (default: Qwen/Qwen2.5-7B-Instruct)",
+        default="meta-llama/Llama-3.2-3B-Instruct",
+        help="Tokenizer to use (default: meta-llama/Llama-3.2-3B-Instruct)",
     )
     parser.add_argument(
         "--users",

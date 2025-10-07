@@ -58,7 +58,7 @@ python examples/benchmark_chat_simulation.py \
     --host https://your-llm-endpoint.com \
     --model your-model-name \
     --engine vllm \
-    --tokenizer Qwen/Qwen2.5-7B-Instruct
+    --tokenizer meta-llama/Llama-3.2-3B-Instruct
 ```
 
 ---
@@ -103,7 +103,7 @@ python examples/benchmark_rag_simulation.py \
     --host https://your-llm-endpoint.com \
     --model your-model-name \
     --engine vllm \
-    --tokenizer Qwen/Qwen2.5-7B-Instruct
+    --tokenizer meta-llama/Llama-3.2-3B-Instruct
 ```
 
 #### Focus Areas
@@ -159,7 +159,7 @@ python examples/benchmark_code_generation.py \
     --host https://your-llm-endpoint.com \
     --model your-model-name \
     --engine vllm \
-    --tokenizer Qwen/Qwen2.5-7B-Instruct
+    --tokenizer meta-llama/Llama-3.2-3B-Instruct
 ```
 
 #### Focus Areas
@@ -210,7 +210,7 @@ python examples/benchmark_constant_rate.py \
     --host https://your-llm-endpoint.com \
     --model your-model-name \
     --engine vllm \
-    --tokenizer Qwen/Qwen2.5-7B-Instruct
+    --tokenizer meta-llama/Llama-3.2-3B-Instruct
 ```
 
 #### Custom Rate Example
@@ -280,7 +280,7 @@ python examples/benchmark_poisson_rate.py \
     --host https://your-llm-endpoint.com \
     --model your-model-name \
     --engine vllm \
-    --tokenizer Qwen/Qwen2.5-7B-Instruct
+    --tokenizer meta-llama/Llama-3.2-3B-Instruct
 ```
 
 #### Custom Burst Configuration
@@ -326,9 +326,9 @@ python examples/benchmark_poisson_rate.py \
 # Run Chat Simulation benchmark (Test 1a)
 python examples/benchmark_chat_simulation.py \
     --host http://localhost:8000 \
-    --model Qwen/Qwen2.5-7B-Instruct \
+    --model meta-llama/Llama-3.2-3B-Instruct \
     --engine vllm \
-    --tokenizer Qwen/Qwen2.5-7B-Instruct
+    --tokenizer meta-llama/Llama-3.2-3B-Instruct
 ```
 
 ### Custom Configuration

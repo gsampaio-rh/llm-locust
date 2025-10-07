@@ -21,15 +21,15 @@ race:
   engines:
     - name: "vllm"
       url: "https://vllm-test-vllm-benchmark.apps.cluster-njnqr.njnqr.sandbox1049.opentlc.com"
-      model: "Qwen/Qwen2.5-7B-Instruct"
+      model: "meta-llama/Llama-3.2-3B-Instruct"
       emoji: "🚀"
       color: "bright_blue"
-      tokenizer: "Qwen/Qwen2.5-7B-Instruct"
+      tokenizer: "meta-llama/Llama-3.2-3B-Instruct"
 
     - name: "tgi"
       url: "http://tgi-test-vllm-benchmark.apps.cluster-njnqr.njnqr.sandbox1049.opentlc.com"
-      model: "Qwen/Qwen2.5-7B-Instruct"
+      model: "meta-llama/Llama-3.2-3B-Instruct"
       emoji: "🤖"
       color: "bright_magenta"
-      tokenizer: "Qwen/Qwen2.5-7B-Instruct"
+      tokenizer: "meta-llama/Llama-3.2-3B-Instruct"
 

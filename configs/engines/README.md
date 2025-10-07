@@ -158,7 +158,7 @@ kubectl get pods -n vllm-benchmark
 python examples/benchmark_chat_simulation.py \
     --engine vllm \
     --host https://vllm-endpoint \
-    --model Qwen/Qwen2.5-7B-Instruct
+    --model meta-llama/Llama-3.2-3B-Instruct
 ```
 
 ### For Cost Analysis

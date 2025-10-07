@@ -383,7 +383,7 @@ The parser extracts from deployment YAMLs:
 | **CPU Cores** | `resources.limits.cpu` | `4` |
 | **Memory** | `resources.limits.memory` | `24Gi` |
 | **Replicas** | `spec.replicas` | `1` |
-| **Model Name** | `container.args` (--model flag) | `Qwen/Qwen2.5-7B-Instruct` |
+| **Model Name** | `container.args` (--model flag) | `meta-llama/Llama-3.2-3B-Instruct` |
 | **GPU Utilization** | `container.args` (--gpu-memory-utilization) | `0.92` |
 
 #### Cost Allocation Modes
@@ -423,7 +423,7 @@ class DeploymentConfig:
     cpu_cores: str                  # "4", "8", "16"
     memory_gi: str                  # "24Gi", "48Gi"
     replicas: int                   # 1, 2, 3
-    model_name: Optional[str]       # "Qwen/Qwen2.5-7B-Instruct"
+    model_name: Optional[str]       # "meta-llama/Llama-3.2-3B-Instruct"
     gpu_memory_utilization: Optional[float]  # 0.60, 0.92
 ```
 

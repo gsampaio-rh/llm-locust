@@ -40,7 +40,7 @@ spec:
             nvidia.com/gpu: "1"
         
         # Note: Ollama doesn't expose model in args
-        # Model: qwen2.5:7b-instruct-fp16 (pulled via init container)
+        # Model: llama3.2:3b-instruct-fp16 (pulled via init container)
         
         ports:
           - name: http

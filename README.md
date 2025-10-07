@@ -18,7 +18,7 @@ A specialized load testing tool for Large Language Model inference endpoints wit
 pip install -e .
 
 # Basic usage
-python examples/simple_test.py --host https://vllm-test-vllm-benchmark.apps.cluster-njnqr.njnqr.sandbox1049.opentlc.com --model Qwen/Qwen2.5-7B-Instruct --tokenizer Qwen/Qwen2.5-7B-Instruct --users 10
+python examples/simple_test.py --host https://vllm-test-vllm-benchmark.apps.cluster-njnqr.njnqr.sandbox1049.opentlc.com --model meta-llama/Llama-3.2-3B-Instruct --tokenizer meta-llama/Llama-3.2-3B-Instruct --users 10
 ```
 
 ## 📦 Installation
@@ -42,7 +42,7 @@ python examples/benchmark_chat_simulation.py \
     --host http://localhost:8000 \
     --model your-model-name \
     --engine vllm \
-    --tokenizer Qwen/Qwen2.5-7B-Instruct
+    --tokenizer meta-llama/Llama-3.2-3B-Instruct
 ```
 
 **Available Benchmarks:**
@@ -96,7 +96,7 @@ from multiprocessing import Process, Queue
 import asyncio
 
 # Load tokenizer and prompts
-tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2.5-7B-Instruct")
+tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-3B-Instruct")
 prompts = load_databricks_dolly(tokenizer, min_input_length=100, max_input_length=500)
 
 # Create client

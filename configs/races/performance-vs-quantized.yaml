@@ -20,15 +20,15 @@ race:
   engines:
     - name: "vllm-perf"
       url: "https://vllm-performance-vllm-benchmark.apps.cluster-njnqr.njnqr.sandbox1049.opentlc.com"
-      model: "Qwen/Qwen2.5-7B-Instruct"
+      model: "meta-llama/Llama-3.2-3B-Instruct"
       emoji: "⚡"
       color: "bright_yellow"
-      tokenizer: "Qwen/Qwen2.5-7B-Instruct"
+      tokenizer: "meta-llama/Llama-3.2-3B-Instruct"
 
     - name: "vllm-quant"
       url: "https://vllm-quantized-vllm-benchmark.apps.cluster-njnqr.njnqr.sandbox1049.opentlc.com"
-      model: "RedHatAI/Qwen2.5-7B-quantized.w8a8"
+      model: "RedHatAI/Llama-3.2-3B-Instruct-quantized.w8a8"
       emoji: "💰"
       color: "bright_green"
-      tokenizer: "Qwen/Qwen2.5-7B-Instruct"
+      tokenizer: "meta-llama/Llama-3.2-3B-Instruct"
 

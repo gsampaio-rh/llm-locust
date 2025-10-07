@@ -20,15 +20,15 @@ race:
   engines:
     - name: "vllm-rag"
       url: "http://localhost:8000"
-      model: "Qwen/Qwen2.5-7B-Instruct"
+      model: "meta-llama/Llama-3.2-3B-Instruct"
       emoji: "📚"
       color: "blue"
-      tokenizer: "Qwen/Qwen2.5-7B-Instruct"
+      tokenizer: "meta-llama/Llama-3.2-3B-Instruct"
     
     - name: "tgi-rag"
       url: "http://localhost:8001"
-      model: "Qwen/Qwen2.5-7B-Instruct"
+      model: "meta-llama/Llama-3.2-3B-Instruct"
       emoji: "📖"
       color: "cyan"
-      tokenizer: "Qwen/Qwen2.5-7B-Instruct"
+      tokenizer: "meta-llama/Llama-3.2-3B-Instruct"
 
