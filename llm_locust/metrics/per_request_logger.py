@@ -37,6 +37,7 @@ class PerRequestLogger:
         include_text: bool = True,
         max_text_length: int = 500,
         progress_queue: Any = None,
+        ttft_queue: Any = None,
     ) -> None:
         """
         Initialize per-request logger.
@@ -49,6 +50,7 @@ class PerRequestLogger:
             include_text: Include input prompt and output text in logs
             max_text_length: Maximum text length to log (prevents huge CSVs)
             progress_queue: Optional queue to send progress updates to
+            ttft_queue: Optional queue to send TTFT samples to (for stress testing)
         """
         self.output_file = Path(output_file)
         self.format = format.lower()
@@ -58,6 +60,7 @@ class PerRequestLogger:
         self.max_text_length = max_text_length
         self.request_count = 0
         self.progress_queue = progress_queue
+        self.ttft_queue = ttft_queue
         
         # Per-user tracking
         self.user_requests: dict[int, int] = defaultdict(int)
@@ -228,6 +231,13 @@ class PerRequestLogger:
                 self.progress_queue.put_nowait(progress_update)
             except:
                 # Queue full or unavailable - not critical, skip
+                pass
+        
+        # Send TTFT to ttft queue if provided (for stress testing)
+        if self.ttft_queue is not None and ttft_ms > 0:
+            try:
+                self.ttft_queue.put_nowait(ttft_ms)
+            except:
                 pass
 
     def _log_failure(self, request_log: RequestFailureLog) -> None:
