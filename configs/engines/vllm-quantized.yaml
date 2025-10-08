@@ -16,7 +16,7 @@ metadata:
     cost.optimization: quantized
     quantization.type: awq
     kv.cache.dtype: fp8
-    gpu.memory.target: 60-percent
+    gpu.memory.target: 85-percent
     features: 'prefix-caching,v2-block-manager,priority-scheduling'
 
 spec:
@@ -56,7 +56,7 @@ spec:
             - '--dtype=auto'
             - '--kv-cache-dtype=fp8'  # FP8 for cost savings
             - '--calculate-kv-scales'
-            - '--gpu-memory-utilization=0.60'  # 60% - cost optimized
+            - '--gpu-memory-utilization=0.85'  # 85% - cost optimized
             - '--swap-space=8'
             - '--max-model-len=4096'
             - '--max-num-batched-tokens=6144'

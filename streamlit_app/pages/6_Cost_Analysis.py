@@ -9,12 +9,13 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from config import INSTANCE_CONFIGS
+from config import INSTANCE_CONFIGS, PLATFORM_COLORS
 from lib.cloud_pricing_loader import (
     APIModelPricing,
     filter_models,
@@ -801,57 +802,8 @@ st.markdown("---")
 st.subheader("🎯 Cost Insights")
 
 if len(benchmarks) >= 2:
-    # Find most cost-efficient (lowest cost per 1M tokens)
-    valid_platforms = []
-    for benchmark in benchmarks:
-        # Calculate sustained throughput
-        success_df_temp = benchmark.df[benchmark.df["status_code"] == 200]
-        total_output_temp = success_df_temp["output_tokens"].sum() if len(success_df_temp) > 0 else 0
-        sustained_throughput = total_output_temp / benchmark.metadata.duration_seconds if benchmark.metadata.duration_seconds > 0 else 0
-        
-        if sustained_throughput > 0:
-            config = st.session_state["cost_config"][benchmark.metadata.platform]
-            cost_per_hour = config["cost_per_hour"]
-            tokens_per_hour = sustained_throughput * 3600
-            cost_per_million = (cost_per_hour / tokens_per_hour) * 1_000_000
-            valid_platforms.append((benchmark.metadata.platform, cost_per_million, benchmark))
-    
-    if len(valid_platforms) >= 2:
-        valid_platforms.sort(key=lambda x: x[1])  # Sort by cost
-        
-        best_platform, best_cost, best_benchmark = valid_platforms[0]
-        worst_platform, worst_cost, worst_benchmark = valid_platforms[-1]
-        
-        savings = worst_cost - best_cost
-        savings_pct = (savings / worst_cost) * 100
-        
-        st.success(f"""
-        🏆 **{best_platform}** is most cost-efficient
-        
-        - **\\${best_cost:.2f}** per 1M tokens
-        - **{savings_pct:.1f}% cheaper** than {worst_platform}
-        - **Saves \\${savings:.2f}** per 1M tokens
-        """)
-        
-        # Calculate monthly savings at target QPS
-        success_df_best = best_benchmark.df[best_benchmark.df["status_code"] == 200]
-        success_df_worst = worst_benchmark.df[worst_benchmark.df["status_code"] == 200]
-        
-        if len(success_df_best) > 0 and len(success_df_worst) > 0:
-            # Calculate savings at current token volume
-            # Using 10M tokens/month as default scenario
-            scenario_tokens = 10_000_000
-            monthly_savings = (scenario_tokens / 1_000_000) * savings
-            
-            if monthly_savings > 100:
-                st.info(f"""
-                💰 **Example Savings:** At 10M tokens/month, using {best_platform} instead of {worst_platform} 
-                saves approximately **\\${monthly_savings:,.0f}/month** (\\${monthly_savings * 12:,.0f}/year)
-                """)
-    
-    # Cost vs Performance trade-off
-    st.markdown("**Cost vs Performance Trade-offs:**")
-    
+    # Calculate metrics for all platforms
+    platform_metrics = []
     for benchmark in benchmarks:
         # Calculate sustained throughput
         success_df_temp = benchmark.df[benchmark.df["status_code"] == 200]
@@ -867,9 +819,282 @@ if len(benchmarks) >= 2:
             # Efficiency score: throughput per dollar per hour
             efficiency = sustained_throughput / cost_per_hour if cost_per_hour > 0 else 0
             
-            st.markdown(f"- **{benchmark.metadata.platform}**: ${cost_per_million:.2f}/1M tok | "
-                       f"TTFT P50: {benchmark.ttft_p50:.0f}ms | "
-                       f"Efficiency: {efficiency:.1f} tok/s per $/hr")
+            platform_metrics.append({
+                'platform': benchmark.metadata.platform,
+                'cost_per_million': cost_per_million,
+                'cost_per_hour': cost_per_hour,
+                'throughput': sustained_throughput,
+                'efficiency': efficiency,
+                'ttft_p50': benchmark.ttft_p50,
+                'ttft_p90': benchmark.ttft_p90,
+                'benchmark': benchmark
+            })
+    
+    if len(platform_metrics) >= 2:
+        # Sort by cost efficiency
+        platform_metrics_sorted = sorted(platform_metrics, key=lambda x: x['cost_per_million'])
+        
+        # Show winner callout
+        best = platform_metrics_sorted[0]
+        worst = platform_metrics_sorted[-1]
+        savings = worst['cost_per_million'] - best['cost_per_million']
+        savings_pct = (savings / worst['cost_per_million']) * 100
+        
+        st.success(f"""
+        🏆 **{best['platform']}** is most cost-efficient at **${best['cost_per_million']:.2f}/1M tokens** 
+        ({savings_pct:.1f}% cheaper than {worst['platform']})
+        """)
+        
+        # ============= CHART 1: Cost per 1M Tokens Comparison =============
+        st.markdown("### 📊 Cost Efficiency Comparison")
+        
+        chart_col1, chart_col2 = st.columns([2, 1])
+        
+        with chart_col1:
+            # Horizontal bar chart for cost per 1M tokens
+            fig_cost = go.Figure()
+            
+            platforms = [m['platform'] for m in platform_metrics_sorted]
+            costs = [m['cost_per_million'] for m in platform_metrics_sorted]
+            colors_list = [PLATFORM_COLORS.get(p.lower(), PLATFORM_COLORS['default']) for p in platforms]
+            
+            # Highlight best with different opacity
+            opacities = [1.0 if i == 0 else 0.7 for i in range(len(platforms))]
+            
+            fig_cost.add_trace(go.Bar(
+                y=platforms,
+                x=costs,
+                orientation='h',
+                marker=dict(
+                    color=colors_list,
+                    opacity=opacities,
+                    line=dict(color='rgba(0,0,0,0.3)', width=1)
+                ),
+                text=[f'${c:.2f}' for c in costs],
+                textposition='outside',
+                hovertemplate='<b>%{y}</b><br>Cost: $%{x:.2f}/1M tokens<extra></extra>'
+            ))
+            
+            fig_cost.update_layout(
+                title="Cost per 1 Million Tokens (Lower is Better)",
+                xaxis_title="Cost ($)",
+                yaxis_title="",
+                height=max(300, len(platforms) * 60),
+                showlegend=False,
+                xaxis=dict(gridcolor='rgba(128,128,128,0.2)'),
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+            )
+            
+            st.plotly_chart(fig_cost, use_container_width=True)
+        
+        with chart_col2:
+            st.markdown("**💡 Key Takeaways:**")
+            
+            # Cost range
+            cost_range = worst['cost_per_million'] - best['cost_per_million']
+            st.metric("Cost Range", f"${cost_range:.2f}", 
+                     delta=f"{(cost_range/best['cost_per_million']*100):.0f}% spread")
+            
+            # Monthly savings at 10M tokens
+            monthly_10m = (10_000_000 / 1_000_000) * savings
+            st.metric("Monthly Savings*", f"${monthly_10m:,.0f}", 
+                     delta="at 10M tok/mo")
+            
+            # Annual projection
+            annual_savings = monthly_10m * 12
+            st.metric("Annual Savings*", f"${annual_savings:,.0f}",
+                     delta="projected")
+            
+            st.caption("*Comparing best vs worst platform")
+        
+        # ============= CHART 2: Cost vs Performance Scatter =============
+        st.markdown("### ⚖️ Cost vs Performance Trade-off")
+        
+        fig_scatter = go.Figure()
+        
+        for metric in platform_metrics:
+            fig_scatter.add_trace(go.Scatter(
+                x=[metric['cost_per_million']],
+                y=[metric['ttft_p50']],
+                mode='markers+text',
+                name=metric['platform'],
+                marker=dict(
+                    size=20,
+                    color=PLATFORM_COLORS.get(metric['platform'].lower(), PLATFORM_COLORS['default']),
+                    symbol='circle',
+                    line=dict(color='white', width=2)
+                ),
+                text=[metric['platform']],
+                textposition='top center',
+                hovertemplate=(
+                    '<b>%{text}</b><br>'
+                    'Cost: $%{x:.2f}/1M tokens<br>'
+                    'TTFT P50: %{y:.0f}ms<br>'
+                    f"Throughput: {metric['throughput']:.1f} tok/s<br>"
+                    '<extra></extra>'
+                ),
+            ))
+        
+        # Add quadrants for context
+        median_cost = np.median([m['cost_per_million'] for m in platform_metrics])
+        median_ttft = np.median([m['ttft_p50'] for m in platform_metrics])
+        
+        # Add reference lines
+        fig_scatter.add_hline(y=median_ttft, line_dash="dash", line_color="gray", opacity=0.3)
+        fig_scatter.add_vline(x=median_cost, line_dash="dash", line_color="gray", opacity=0.3)
+        
+        # Add quadrant labels
+        fig_scatter.add_annotation(
+            x=median_cost * 1.5, y=median_ttft * 0.5,
+            text="💰🐰<br>Expensive<br>but Fast",
+            showarrow=False, opacity=0.3, font=dict(size=10)
+        )
+        fig_scatter.add_annotation(
+            x=median_cost * 0.5, y=median_ttft * 0.5,
+            text="🏆✨<br>Best Value<br>(Low Cost, Fast)",
+            showarrow=False, opacity=0.3, font=dict(size=10)
+        )
+        fig_scatter.add_annotation(
+            x=median_cost * 1.5, y=median_ttft * 1.5,
+            text="💸🐌<br>Expensive<br>and Slow",
+            showarrow=False, opacity=0.3, font=dict(size=10)
+        )
+        fig_scatter.add_annotation(
+            x=median_cost * 0.5, y=median_ttft * 1.5,
+            text="💵🐌<br>Cheap<br>but Slow",
+            showarrow=False, opacity=0.3, font=dict(size=10)
+        )
+        
+        fig_scatter.update_layout(
+            title="Cost per 1M Tokens vs Time to First Token (P50)",
+            xaxis_title="Cost per 1M Tokens ($) → Lower is Better",
+            yaxis_title="TTFT P50 (ms) → Lower is Better",
+            height=500,
+            showlegend=False,
+            hovermode='closest',
+            plot_bgcolor='rgba(245,245,245,0.5)',
+            xaxis=dict(gridcolor='rgba(128,128,128,0.2)'),
+            yaxis=dict(gridcolor='rgba(128,128,128,0.2)'),
+        )
+        
+        st.plotly_chart(fig_scatter, use_container_width=True)
+        st.caption("🎯 **Sweet spot:** Bottom-left quadrant (low cost + fast response)")
+        
+        # ============= CHART 3: Efficiency Score =============
+        st.markdown("### ⚡ Efficiency Score (Tokens per Dollar per Hour)")
+        
+        fig_efficiency = go.Figure()
+        
+        platforms_eff = [m['platform'] for m in sorted(platform_metrics, key=lambda x: x['efficiency'], reverse=True)]
+        efficiencies = [m['efficiency'] for m in sorted(platform_metrics, key=lambda x: x['efficiency'], reverse=True)]
+        colors_eff = [PLATFORM_COLORS.get(p.lower(), PLATFORM_COLORS['default']) for p in platforms_eff]
+        
+        fig_efficiency.add_trace(go.Bar(
+            x=platforms_eff,
+            y=efficiencies,
+            marker=dict(
+                color=colors_eff,
+                line=dict(color='rgba(0,0,0,0.3)', width=1)
+            ),
+            text=[f'{e:.1f}' for e in efficiencies],
+            textposition='outside',
+            hovertemplate='<b>%{x}</b><br>Efficiency: %{y:.1f} tokens/sec per $/hour<extra></extra>'
+        ))
+        
+        fig_efficiency.update_layout(
+            title="Throughput Efficiency (Higher is Better)",
+            xaxis_title="",
+            yaxis_title="Tokens per Second per $/hour",
+            height=400,
+            showlegend=False,
+            yaxis=dict(gridcolor='rgba(128,128,128,0.2)'),
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+        )
+        
+        st.plotly_chart(fig_efficiency, use_container_width=True)
+        st.caption("💡 **Efficiency Score** = (Throughput in tok/s) ÷ (Cost per hour) - Shows how much throughput you get per dollar")
+        
+        # ============= CHART 4: Monthly Cost Projection =============
+        st.markdown("### 📈 Cost Projection at Different Scales")
+        
+        # Interactive scale selector
+        scale_options = {
+            "Small (1M tok/mo)": 1_000_000,
+            "Medium (10M tok/mo)": 10_000_000,
+            "Large (50M tok/mo)": 50_000_000,
+            "Enterprise (100M tok/mo)": 100_000_000,
+            "Massive (500M tok/mo)": 500_000_000,
+        }
+        
+        selected_scales = st.multiselect(
+            "Select usage scales to compare:",
+            options=list(scale_options.keys()),
+            default=["Small (1M tok/mo)", "Medium (10M tok/mo)", "Large (50M tok/mo)"]
+        )
+        
+        if selected_scales:
+            fig_projection = go.Figure()
+            
+            for metric in platform_metrics_sorted:
+                scale_names = []
+                monthly_costs = []
+                
+                for scale_name in selected_scales:
+                    tokens = scale_options[scale_name]
+                    cost = (tokens / 1_000_000) * metric['cost_per_million']
+                    scale_names.append(scale_name.split("(")[0].strip())
+                    monthly_costs.append(cost)
+                
+                fig_projection.add_trace(go.Bar(
+                    name=metric['platform'],
+                    x=scale_names,
+                    y=monthly_costs,
+                    marker=dict(
+                        color=PLATFORM_COLORS.get(metric['platform'].lower(), PLATFORM_COLORS['default'])
+                    ),
+                    text=[f'${c:,.0f}' for c in monthly_costs],
+                    textposition='outside',
+                    hovertemplate='<b>%{fullData.name}</b><br>%{x}<br>$%{y:,.0f}/month<extra></extra>'
+                ))
+            
+            fig_projection.update_layout(
+                title="Monthly Cost Projections",
+                xaxis_title="Usage Scale",
+                yaxis_title="Monthly Cost ($)",
+                height=500,
+                barmode='group',
+                showlegend=True,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                yaxis=dict(gridcolor='rgba(128,128,128,0.2)'),
+                plot_bgcolor='rgba(0,0,0,0)',
+            )
+            
+            st.plotly_chart(fig_projection, use_container_width=True)
+            
+            # Show savings table
+            if len(platform_metrics_sorted) >= 2:
+                st.markdown("**💰 Potential Savings (Best vs Others):**")
+                
+                savings_data = []
+                best_platform = platform_metrics_sorted[0]
+                
+                for scale_name in selected_scales:
+                    tokens = scale_options[scale_name]
+                    best_cost = (tokens / 1_000_000) * best_platform['cost_per_million']
+                    
+                    row = {'Scale': scale_name.split("(")[0].strip()}
+                    
+                    for metric in platform_metrics_sorted[1:]:
+                        other_cost = (tokens / 1_000_000) * metric['cost_per_million']
+                        monthly_savings = other_cost - best_cost
+                        annual_savings = monthly_savings * 12
+                        row[f'vs {metric["platform"]}'] = f'${monthly_savings:,.0f}/mo (${annual_savings:,.0f}/yr)'
+                    
+                    savings_data.append(row)
+                
+                st.dataframe(pd.DataFrame(savings_data), use_container_width=True, hide_index=True)
 
 else:
     st.info("Upload at least 2 benchmarks to see cost comparisons")
@@ -889,11 +1114,29 @@ else:
             tokens_per_hour = sustained_throughput * 3600
             cost_per_million = (cost_per_hour / tokens_per_hour) * 1_000_000
             
-            st.metric(
-                "Cost per 1M Tokens",
-                f"${cost_per_million:.2f}",
-                delta=f"{config['gpu_type']} on {config['cloud_provider']}",
-            )
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.metric(
+                    "Cost per 1M Tokens",
+                    f"${cost_per_million:.2f}",
+                )
+            
+            with col2:
+                monthly_cost_10m = (10_000_000 / 1_000_000) * cost_per_million
+                st.metric(
+                    "Monthly Cost",
+                    f"${monthly_cost_10m:,.0f}",
+                    delta="at 10M tok/mo"
+                )
+            
+            with col3:
+                efficiency = sustained_throughput / cost_per_hour if cost_per_hour > 0 else 0
+                st.metric(
+                    "Efficiency Score",
+                    f"{efficiency:.1f}",
+                    delta="tok/s per $/hr"
+                )
 
 st.markdown("---")
 

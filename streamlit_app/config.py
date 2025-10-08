@@ -93,20 +93,36 @@ DEFAULT_SUCCESS_RATE_THRESHOLD: Final[float] = 0.999  # 99.9%
 # GPU and Cloud Pricing (approximate, as of Oct 2025)
 # Pre-configured instance types with pricing
 INSTANCE_CONFIGS: Final[dict[str, dict]] = {
-    # AWS
+    # AWS - High Performance
     "AWS p5.48xlarge (8x H100)": {"provider": "AWS", "gpu": "H100", "gpu_count": 8, "cost_per_hour": 98.32},
     "AWS p4d.24xlarge (8x A100)": {"provider": "AWS", "gpu": "A100", "gpu_count": 8, "cost_per_hour": 32.77},
     "AWS p4de.24xlarge (8x A100)": {"provider": "AWS", "gpu": "A100", "gpu_count": 8, "cost_per_hour": 40.97},
+    
+    # AWS - Mid Range
     "AWS g6.xlarge (1x L4)": {"provider": "AWS", "gpu": "L4", "gpu_count": 1, "cost_per_hour": 0.857},
     "AWS g6.2xlarge (1x L4)": {"provider": "AWS", "gpu": "L4", "gpu_count": 1, "cost_per_hour": 1.212},
     "AWS g6.4xlarge (1x L4)": {"provider": "AWS", "gpu": "L4", "gpu_count": 1, "cost_per_hour": 1.82},
+    "AWS g6.8xlarge (1x L4)": {"provider": "AWS", "gpu": "L4", "gpu_count": 1, "cost_per_hour": 2.424},
     "AWS g6.12xlarge (4x L4)": {"provider": "AWS", "gpu": "L4", "gpu_count": 4, "cost_per_hour": 4.848},
     "AWS g6.48xlarge (8x L4)": {"provider": "AWS", "gpu": "L4", "gpu_count": 8, "cost_per_hour": 9.696},
     "AWS g5.xlarge (1x A10G)": {"provider": "AWS", "gpu": "A10G", "gpu_count": 1, "cost_per_hour": 1.006},
+    "AWS g5.2xlarge (1x A10G)": {"provider": "AWS", "gpu": "A10G", "gpu_count": 1, "cost_per_hour": 1.515},
+    "AWS g5.4xlarge (1x A10G)": {"provider": "AWS", "gpu": "A10G", "gpu_count": 1, "cost_per_hour": 2.03},
     "AWS g5.12xlarge (4x A10G)": {"provider": "AWS", "gpu": "A10G", "gpu_count": 4, "cost_per_hour": 5.672},
     "AWS g5.48xlarge (8x A10G)": {"provider": "AWS", "gpu": "A10G", "gpu_count": 8, "cost_per_hour": 16.288},
+    
+    # AWS - Budget (T4 GPUs - Most Cost-Effective for Inference)
+    "AWS g4dn.xlarge (1x T4)": {"provider": "AWS", "gpu": "T4", "gpu_count": 1, "cost_per_hour": 0.526},
+    "AWS g4dn.2xlarge (1x T4)": {"provider": "AWS", "gpu": "T4", "gpu_count": 1, "cost_per_hour": 0.752},
+    "AWS g4dn.4xlarge (1x T4)": {"provider": "AWS", "gpu": "T4", "gpu_count": 1, "cost_per_hour": 1.204},
+    "AWS g4dn.8xlarge (1x T4)": {"provider": "AWS", "gpu": "T4", "gpu_count": 1, "cost_per_hour": 2.176},
+    "AWS g4dn.12xlarge (4x T4)": {"provider": "AWS", "gpu": "T4", "gpu_count": 4, "cost_per_hour": 3.912},
+    "AWS g4dn.16xlarge (1x T4)": {"provider": "AWS", "gpu": "T4", "gpu_count": 1, "cost_per_hour": 4.352},
+    
+    # AWS - Legacy
     "AWS p3.2xlarge (1x V100)": {"provider": "AWS", "gpu": "V100", "gpu_count": 1, "cost_per_hour": 3.06},
     "AWS p3.8xlarge (4x V100)": {"provider": "AWS", "gpu": "V100", "gpu_count": 4, "cost_per_hour": 12.24},
+    "AWS p3.16xlarge (8x V100)": {"provider": "AWS", "gpu": "V100", "gpu_count": 8, "cost_per_hour": 24.48},
     
     # GCP
     "GCP a3-highgpu-8g (8x H100)": {"provider": "GCP", "gpu": "H100", "gpu_count": 8, "cost_per_hour": 29.39},
@@ -130,6 +146,6 @@ INSTANCE_CONFIGS: Final[dict[str, dict]] = {
     "Custom (Enter Manually)": {"provider": "Custom", "gpu": "Custom", "gpu_count": 1, "cost_per_hour": 0.0},
 }
 
-GPU_TYPES: Final[list[str]] = ["H100", "A100", "L40S", "L4", "A10G", "V100"]
+GPU_TYPES: Final[list[str]] = ["H100", "A100", "L40S", "L4", "A10G", "T4", "V100"]
 CLOUD_PROVIDERS: Final[list[str]] = ["AWS", "GCP", "Azure", "On-prem"]
 

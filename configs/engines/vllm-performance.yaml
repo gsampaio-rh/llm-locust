@@ -1,7 +1,8 @@
 # vLLM Performance - Maximum Performance Configuration
 # Purpose: Benchmark with all performance optimizations enabled
-# Last Updated: 2025-10-06
+# Last Updated: 2025-10-08
 # Benchmark ID: Performance vs Quantized comparison
+# Optimizations: FP8 KV Cache, Prefix Caching, Chunked Prefill, CUDA Graphs
 
 kind: Deployment
 apiVersion: apps/v1
@@ -11,12 +12,10 @@ metadata:
   labels:
     app.kubernetes.io/name: vllm
     app.kubernetes.io/instance: vllm-performance
+    app.kubernetes.io/version: 0.8.5
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: vllm-1.0.0
     vllm.config/name: performance
-  annotations:
-    performance.mode: maximum
-    purpose: maximum-performance
-    optimizations: 'prefix-caching,chunked-prefill,v2-block-manager,preemption,multi-step-stream'
-    features.enabled: all
 
 spec:
   replicas: 1
@@ -25,40 +24,122 @@ spec:
       app.kubernetes.io/name: vllm
       app.kubernetes.io/instance: vllm-performance
 
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+
   template:
     metadata:
       labels:
         app.kubernetes.io/name: vllm
         app.kubernetes.io/instance: vllm-performance
+        app.kubernetes.io/version: 0.8.5
+        app.kubernetes.io/managed-by: Helm
+        helm.sh/chart: vllm-1.0.0
+        vllm.config/name: performance
       annotations:
-        performance.mode: maximum
-        features.enabled: all
+        performance.mode: maximum-throughput
+        optimization.target: million-token-generation
+        gpu.type: nvidia-l4
+        gpu.memory: 24gb
+        instance.type: g6.4xlarge
+        model.precision: bfloat16
+        kv.cache.precision: fp8
+        features.enabled: 'fp8-kv-cache,prefix-caching,chunked-prefill,preemption,cuda-graphs'
 
     spec:
+      serviceAccountName: vllm-performance
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+
+      securityContext:
+        runAsNonRoot: false
+        fsGroup: 0
+
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/gpu.present
+                    operator: In
+                    values:
+                      - 'true'
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: accelerator
+                    operator: In
+                    values:
+                      - nvidia-l4
+                      - nvidia-l40s
+                      - nvidia-l40
+            - weight: 90
+              preference:
+                matchExpressions:
+                  - key: node.kubernetes.io/instance-type
+                    operator: In
+                    values:
+                      - g6.4xlarge
+                      - g6.2xlarge
+                      - g6.xlarge
+            - weight: 80
+              preference:
+                matchExpressions:
+                  - key: accelerator
+                    operator: In
+                    values:
+                      - nvidia-a10
+                      - nvidia-a10g
+                      - nvidia-t4
+            - weight: 50
+              preference:
+                matchExpressions:
+                  - key: accelerator
+                    operator: NotIn
+                    values:
+                      - nvidia-tesla-k80
+                      - nvidia-tesla-p4
+                      - nvidia-tesla-p100
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 50
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: vllm
+                topologyKey: kubernetes.io/hostname
+
       containers:
         - name: vllm
           image: 'docker.io/vllm/vllm-openai:latest'
+          imagePullPolicy: IfNotPresent
 
           resources:
             requests:
-              cpu: '2'
-              memory: 16Gi
-              nvidia.com/gpu: '1'
-            limits:
               cpu: '4'
               memory: 24Gi
+              nvidia.com/gpu: '1'
+            limits:
+              cpu: '8'
+              memory: 32Gi
               nvidia.com/gpu: '1'
 
           args:
             - '--model=meta-llama/Llama-3.2-3B-Instruct'
             - '--port=8000'
             - '--host=0.0.0.0'
-            - '--dtype=auto'
-            - '--gpu-memory-utilization=0.90'  # 90% - maximum utilization
-            - '--swap-space=8'
+            - '--dtype=bfloat16'
+            - '--kv-cache-dtype=fp8'
+            - '--calculate-kv-scales'
+            - '--gpu-memory-utilization=0.92'
+            - '--swap-space=12'
             - '--max-model-len=4096'
-            - '--max-num-batched-tokens=6144'
-            - '--max-num-seqs=64'
+            - '--max-num-batched-tokens=10240'
+            - '--max-num-seqs=96'
             - '--enable-prefix-caching'
             - '--prefix-caching-hash-algo=builtin'
             - '--enable-chunked-prefill'
@@ -66,6 +147,7 @@ spec:
             - '--num-lookahead-slots=8'
             - '--preemption-mode=recompute'
             - '--disable-log-stats'
+            - '--disable-log-requests'
 
           ports:
             - name: http
@@ -80,9 +162,50 @@ spec:
             - name: CUDA_VISIBLE_DEVICES
               value: '0'
             - name: NCCL_DEBUG
-              value: WARN
+              value: ERROR
             - name: VLLM_USE_MODELSCOPE
               value: 'False'
+            - name: VLLM_USE_CUDA_GRAPH
+              value: '1'
+
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 10
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 60
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 90
+            timeoutSeconds: 10
+            periodSeconds: 30
+            successThreshold: 1
+            failureThreshold: 3
+
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+            allowPrivilegeEscalation: false
 
           volumeMounts:
             - name: model-cache
@@ -97,7 +220,7 @@ spec:
         - name: dshm
           emptyDir:
             medium: Memory
-            sizeLimit: 8Gi
+            sizeLimit: 4Gi
 
       nodeSelector:
         nvidia.com/gpu.present: 'true'

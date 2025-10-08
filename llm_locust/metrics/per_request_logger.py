@@ -36,6 +36,7 @@ class PerRequestLogger:
         summary_interval: int = 10,
         include_text: bool = True,
         max_text_length: int = 500,
+        progress_queue: Any = None,
     ) -> None:
         """
         Initialize per-request logger.
@@ -47,6 +48,7 @@ class PerRequestLogger:
             summary_interval: Print summary every N requests (0 = print all)
             include_text: Include input prompt and output text in logs
             max_text_length: Maximum text length to log (prevents huge CSVs)
+            progress_queue: Optional queue to send progress updates to
         """
         self.output_file = Path(output_file)
         self.format = format.lower()
@@ -55,6 +57,7 @@ class PerRequestLogger:
         self.include_text = include_text
         self.max_text_length = max_text_length
         self.request_count = 0
+        self.progress_queue = progress_queue
         
         # Per-user tracking
         self.user_requests: dict[int, int] = defaultdict(int)
@@ -212,6 +215,20 @@ class PerRequestLogger:
             # Print every request or use summary mode
             if self.summary_interval == 0 or self.request_count % self.summary_interval == 0:
                 self._print_metrics(metrics)
+        
+        # Send progress update to progress queue if provided
+        if self.progress_queue is not None:
+            try:
+                # Create a simple progress update (avoiding complex object serialization)
+                progress_update = {
+                    'input_tokens': request_log.num_input_tokens,
+                    'output_tokens': output_tokens,
+                    'is_success': True
+                }
+                self.progress_queue.put_nowait(progress_update)
+            except:
+                # Queue full or unavailable - not critical, skip
+                pass
 
     def _log_failure(self, request_log: RequestFailureLog) -> None:
         """Log a failed request with minimal metrics."""
@@ -232,6 +249,18 @@ class PerRequestLogger:
             "output_tokens_per_sec": 0.0,
             "status_code": request_log.status_code,
         }
+        
+        # Send progress update for failures too
+        if self.progress_queue is not None:
+            try:
+                progress_update = {
+                    'input_tokens': 0,
+                    'output_tokens': 0,
+                    'is_success': False
+                }
+                self.progress_queue.put_nowait(progress_update)
+            except:
+                pass
         
         if self.include_text:
             metrics["input_prompt"] = "[FAILED]"
